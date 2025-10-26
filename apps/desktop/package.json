@@ -1,0 +1,9 @@
+{
+  "name": "@triggerforge/desktop",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"Run Tauri dev (configure tauri)\"",
+    "build": "echo \"Build Tauri (configure tauri)\""
+  },
+  "dependencies": {}
+}

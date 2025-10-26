@@ -1,0 +1,12 @@
+{
+  "name": "@triggerforge/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "echo 'build ui'"
+  },
+  "dependencies": {
+    "react": "latest"
+  }
+}

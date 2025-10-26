@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///Volumes/VaibhavT7/Vaibhav/SFIT/triggerforge/apps/web/src/app/page.tsx"],"sourcesContent":["import React from 'react';\n\nexport default function Page() {\n  return (\n    <div style={{padding:40,fontFamily:'sans-serif'}}>\n      <h1>TriggerForge — Web UI</h1>\n      <p>Welcome. This is a scaffold. Replace with your Next.js + React Flow app.</p>\n    </div>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAEe,SAAS;IACtB,qBACE,6WAAC;QAAI,OAAO;YAAC,SAAQ;YAAG,YAAW;QAAY;;0BAC7C,6WAAC;0BAAG;;;;;;0BACJ,6WAAC;0BAAE;;;;;;;;;;;;AAGT","debugId":null}}]
+}

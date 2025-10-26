@@ -1,0 +1,12 @@
+{
+  "name": "@triggerforge/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "echo 'build shared'"
+  },
+  "dependencies": {
+    "zod": "^3.22.2"
+  }
+}
