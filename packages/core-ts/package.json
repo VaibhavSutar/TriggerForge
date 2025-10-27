@@ -1,0 +1,41 @@
+{
+  "name": "@triggerforge/core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TriggerForge Core Engine — pure TypeScript workflow executor",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "extends":"../../tsconfig.json",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+ "scripts": {
+  "dev": "tsx src/index.ts",
+  "build": "tsc -p tsconfig.json",
+  "clean": "rimraf dist"
+},
+  "dependencies": { 
+    "@triggerforge/connectors":"*",
+    "axios": "^1.12.2",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.6",
+    "rimraf": "^5.0.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "workflow",
+    "automation",
+    "engine",
+    "triggerforge",
+    "typescript"
+  ],
+  "license": "MIT"
+}
