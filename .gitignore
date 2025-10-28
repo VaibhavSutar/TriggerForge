@@ -8,6 +8,7 @@ build/
 .cache/
 turbo/
 .nx/
+.next/
 
 # lockfiles
 pnpm-lock.yaml
