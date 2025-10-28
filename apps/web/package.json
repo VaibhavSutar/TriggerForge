@@ -9,10 +9,12 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.0.0",
+    "lucide-react": "^0.548.0",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "react-flow-renderer": "^10.3.17"
+    "react-flow-renderer": "^10.3.17",
+    "reactflow": "^11.11.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

@@ -69,3 +69,23 @@ export const buildApiUrl = (endpoint: string): string => {
 export const getRoute = (route: ROUTES): string => {
   return route;
 };
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+export const WORKFLOW_NODE_TYPES = {
+  TRIGGER: 'trigger',
+  ACTION: 'action',
+  CONDITION: 'condition',
+  TIMER: 'timer',
+  EMAIL: 'email',
+  WEBHOOK: 'webhook',
+  DATABASE: 'database',
+  CODE: 'code',
+  FILTER: 'filter',
+} as const;
+
+export const WORKFLOW_STATUS = {
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
