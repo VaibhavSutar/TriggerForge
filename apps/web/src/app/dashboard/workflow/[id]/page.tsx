@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from "react";
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -14,156 +14,231 @@ import ReactFlow, {
   Node,
   NodeTypes,
   ConnectionMode,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import { WorkflowNode } from '@/components/workflow/WorkflowNode';
-import { WorkflowToolbar } from '@/components/workflow/WorkflowToolbar';
-import { NodeSidebar } from '@/components/workflow/NodeSidebar';
+} from "reactflow";
+import "reactflow/dist/style.css";
+import { WorkflowNode } from "@/components/workflow/WorkflowNode";
+import { WorkflowToolbar } from "@/components/workflow/WorkflowToolbar";
+import { NodeSidebar } from "@/components/workflow/NodeSidebar";
+import type { ConnectorManifest } from "@/app/types/workflow";
+import { LOCAL_STORAGE_KEYS } from "@/config/constants";
 
-const nodeTypes: NodeTypes = {
-  workflowNode: WorkflowNode,
-};
-
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'workflowNode',
-    position: { x: 250, y: 100 },
-    data: { 
-      label: 'Start Trigger',
-      nodeType: 'trigger',
-      config: { event: 'manual' }
-    },
-  },
-];
-
+const nodeTypes: NodeTypes = { workflowNode: WorkflowNode };
+const initialNodes: Node[] = []; 
 const initialEdges: Edge[] = [];
-
-export default function WorkflowEditor({ params }: { params: Promise<{ id: string }> }) {
-  const [workflowId, setWorkflowId] = useState<string>('');
-  const [workflowName, setWorkflowName] = useState<string>('Untitled Workflow');
+export default function WorkflowEditor({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const [workflowId, setWorkflowId] = useState<string>("");
+  const [workflowName, setWorkflowName] = useState<string>("Untitled Workflow");
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Resolve params Promise
+  // Run log panel states
+  const [runLogs, setRunLogs] = useState<string[]>([]);
+  const [runOutput, setRunOutput] = useState<any>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [showRunPanel, setShowRunPanel] = useState(false);
+
+  // 🧩 Fetch workflow from backend
+  const loadWorkflow = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/workflows/${id}`);
+      if (!res.ok) throw new Error("Failed to load workflow");
+
+      const data = await res.json();
+      if (!data?.ok || !data?.workflow) throw new Error("Invalid workflow data");
+
+      const wf = data.workflow;
+
+      setWorkflowName(wf.name ?? `Workflow ${wf.id}`);
+
+      // restore nodes & edges from DB JSON
+      const restoredNodes = (wf.json?.nodes ?? []).map((n: any) => ({
+        ...n,
+        type: "workflowNode",
+        data: {
+          ...n.data,
+          onUpdate: updateNodeData,
+        },
+      }));
+
+      setNodes(restoredNodes);
+      setEdges(wf.json?.edges ?? []);
+      console.log("✅ Loaded workflow:", wf);
+    } catch (err) {
+      console.error("❌ Error loading workflow:", err);
+    }
+  }, [setNodes, setEdges]);
+
+  // Resolve params and load workflow
   useEffect(() => {
-    const resolveParams = async () => {
-      const resolvedParams = await params;
-      setWorkflowId(resolvedParams.id);
-      setWorkflowName(`Workflow ${resolvedParams.id}`);
-    };
-    resolveParams();
-  }, [params]);
+    (async () => {
+      const { id } = await params;
+      setWorkflowId(id);
+      await loadWorkflow(id);
+    })();
+  }, [params, loadWorkflow]);
+
+  // Read userId from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem(LOCAL_STORAGE_KEYS.USER);
+    if (storedUser) setUserId(storedUser);
+  }, []);
 
   const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((eds) => addEdge({
-      ...params,
-      animated: true,
-      style: { stroke: '#6366f1', strokeWidth: 2 },
-    }, eds)),
-    [setEdges],
+    (p: Edge | Connection) =>
+      setEdges((eds) =>
+        addEdge(
+          { ...p, animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } },
+          eds
+        )
+      ),
+    [setEdges]
   );
 
-  const updateNodeData = useCallback((nodeId: string, newData: any) => {
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.id === nodeId ? { ...node, data: { ...node.data, ...newData } } : node
-      )
-    );
-  }, [setNodes]);
+  const updateNodeData = useCallback(
+    (nodeId: string, newData: any) => {
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, ...newData } }
+            : node
+        )
+      );
+    },
+    [setNodes]
+  );
 
-  const addNode = useCallback((nodeType: string) => {
-    const nodeConfig = {
-      trigger: { event: 'manual' },
-      print: { message: 'Hello World!' },
-      delay: { ms: 1000 },
-      condition: { expression: '{{input}} > 0' },
-      random: { min: 1, max: 10 },
-      http: { url: 'https://api.example.com', method: 'GET' },
-      email: { to: '', subject: '', body: '' },
-      database: { query: 'SELECT * FROM table', connection: '' },
-    };
+  const addNode = useCallback(
+    (connectorId: string, manifest?: ConnectorManifest) => {
+      const cfg = manifest?.defaultConfig ?? {};
+      const title =
+        manifest?.title ??
+        connectorId.charAt(0).toUpperCase() + connectorId.slice(1);
 
-    const newNode: Node = {
-      id: `node_${Date.now()}`,
-      type: 'workflowNode',
-      position: {
-        x: Math.random() * 400 + 100,
-        y: Math.random() * 300 + 200,
-      },
-      data: {
-        label: nodeType.charAt(0).toUpperCase() + nodeType.slice(1),
-        nodeType: nodeType,
-        config: nodeConfig[nodeType as keyof typeof nodeConfig] || {},
-        onUpdate: updateNodeData,
-      },
-    };
-    setNodes((nds) => nds.concat(newNode));
-    setIsSidebarOpen(false);
-  }, [setNodes, updateNodeData]);
+      const newNode: Node = {
+        id: `node_${Date.now()}`,
+        type: "workflowNode",
+        position: {
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 300 + 200,
+        },
+        data: {
+          label: title,
+          nodeType: connectorId,
+          config: { ...cfg },
+          onUpdate: updateNodeData,
+        },
+      };
 
-  // Update existing nodes to include the update function
+      setNodes((nds) => nds.concat(newNode));
+      setIsSidebarOpen(false);
+    },
+    [setNodes, updateNodeData]
+  );
+
+  // ensure all nodes carry onUpdate
   useEffect(() => {
     setNodes((nds) =>
       nds.map((node) => ({
         ...node,
-        data: {
-          ...node.data,
-          onUpdate: updateNodeData,
-        },
+        data: { ...node.data, onUpdate: updateNodeData },
       }))
     );
   }, [updateNodeData, setNodes]);
 
+  // ✅ Save workflow with proper node type transformation
   const saveWorkflow = useCallback(async () => {
     if (!workflowId) return;
-    
-    const workflowData = {
+    if (!userId) {
+      alert("User ID is required to save the workflow.");
+      return;
+    }
+
+    const preparedNodes = nodes.map((n) => ({
+      id: n.id,
+      type: n.data.nodeType,
+      data: n.data,
+      position: n.position,
+    }));
+
+    const payload = {
       id: workflowId,
+      userId,
       name: workflowName,
-      nodes,
+      nodes: preparedNodes,
       edges,
     };
-    
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/workflow/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(workflowData),
-      });
-      
-      if (response.ok) {
-        console.log('Workflow saved successfully');
-      }
-    } catch (error) {
-      console.error('Error saving workflow:', error);
-    }
-  }, [workflowId, workflowName, nodes, edges]);
 
+    try {
+      const r = await fetch(`/api/workflows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (r.ok && data?.ok) {
+        console.log("✅ Workflow saved:", data.workflow?.id ?? workflowId);
+      } else {
+        console.error("❌ Save failed:", data);
+        alert(data?.error ?? "Save failed");
+      }
+    } catch (e) {
+      console.error("Error saving workflow:", e);
+    }
+  }, [workflowId, workflowName, nodes, edges, userId]);
+
+  // 🚀 Run workflow with n8n-style logs panel
   const runWorkflow = useCallback(async () => {
     if (!workflowId) return;
-    
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/workflow/run/${workflowId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Workflow executed:', result);
-      }
-    } catch (error) {
-      console.error('Error running workflow:', error);
-    }
-  }, [workflowId]);
+      setIsRunning(true);
+      setRunLogs(["▶️ Starting workflow run..."]);
+      setShowRunPanel(true);
 
-  // Show loading state while params are being resolved
+      await saveWorkflow();
+
+      const r = await fetch(`/api/workflows/${workflowId}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, triggeredFrom: "editor" }),
+      });
+
+      const data = await r.json();
+      setIsRunning(false);
+
+      if (!r.ok || !data?.ok) {
+        console.error("❌ Run failed:", data);
+        setRunLogs((prev) => [
+          ...prev,
+          "❌ Run failed.",
+          data?.error ?? "Unknown error",
+        ]);
+        alert(data?.error ?? "Run failed");
+        return;
+      }
+
+      const logs = data?.result?.logs ?? [];
+      const output = data?.result?.output ?? data?.result;
+
+      setRunLogs((prev) => [...prev, ...logs, "✅ Workflow completed."]);
+      setRunOutput(output);
+
+      console.log("▶️ Run result:", data.result);
+    } catch (e) {
+      console.error("Error running workflow:", e);
+      setRunLogs((prev) => [
+        ...prev,
+        "❌ Exception occurred: " + String(e),
+      ]);
+      setIsRunning(false);
+    }
+  }, [workflowId, userId, saveWorkflow]);
+
   if (!workflowId) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-gray-50">
@@ -176,16 +251,16 @@ export default function WorkflowEditor({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="h-screen w-full flex bg-white">
+    <div className="h-screen w-full flex bg-white relative">
       <div className="flex-1 relative">
         <WorkflowToolbar
-          workflowName={workflowName}
+          workflowName={workflowName} // ✅ bound correctly
           onSave={saveWorkflow}
           onAddNode={() => setIsSidebarOpen(true)}
           onNameChange={setWorkflowName}
           onRun={runWorkflow}
         />
-        
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -200,19 +275,19 @@ export default function WorkflowEditor({ params }: { params: Promise<{ id: strin
           minZoom={0.2}
           maxZoom={2}
         >
-          <Controls 
+          <Controls
             className="bg-white border border-gray-200 rounded-lg shadow-lg"
             showInteractive={false}
           />
-          <MiniMap 
+          <MiniMap
             className="bg-white border border-gray-200 rounded-lg shadow-lg"
             maskColor="rgba(0, 0, 0, 0.1)"
             nodeColor="#6366f1"
           />
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={16} 
-            size={2} 
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={16}
+            size={2}
             color="#9ca3af"
           />
         </ReactFlow>
@@ -223,6 +298,40 @@ export default function WorkflowEditor({ params }: { params: Promise<{ id: strin
         onClose={() => setIsSidebarOpen(false)}
         onAddNode={addNode}
       />
+
+      {/* 🧭 Run Output / Logs Panel */}
+      {showRunPanel && (
+        <div className="absolute bottom-0 left-0 right-0 bg-gray-900 text-gray-100 p-3 border-t border-gray-700 max-h-[40vh] overflow-y-auto font-mono text-sm">
+          <div className="flex justify-between items-center mb-2">
+            <div className="font-semibold text-green-400">
+              {isRunning ? "⚙️ Running Workflow..." : "🧩 Workflow Run Logs"}
+            </div>
+            <button
+              onClick={() => setShowRunPanel(false)}
+              className="text-gray-400 hover:text-gray-200 text-xs"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="space-y-1">
+            {runLogs.map((line, i) => (
+              <div key={i} className="whitespace-pre-wrap">
+                {line}
+              </div>
+            ))}
+          </div>
+
+          {runOutput && (
+            <div className="mt-3 border-t border-gray-700 pt-2">
+              <div className="font-semibold text-blue-400 mb-1">🧾 Output:</div>
+              <pre className="text-xs bg-gray-800 p-2 rounded-md overflow-x-auto">
+                {JSON.stringify(runOutput, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

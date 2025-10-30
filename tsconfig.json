@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "moduleResolution": "Node",
+    "lib": ["ES2020", "DOM"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@triggerforge/core": ["packages/core-ts/src"],
+      "@triggerforge/connectors": ["packages/connectors/src"],
+      "@triggerforge/core-ts": ["packages/core-ts/src"],
+    }
+  },
+  "include": ["packages/*/src", "apps/*/src"]
+}

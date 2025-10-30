@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ROUTES, LOCAL_STORAGE_KEYS, ERROR_MESSAGES } from '@/config/constants';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
+  // const {login} = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -30,7 +31,8 @@ export default function LoginPage() {
       console.log('Login response data:', data);
 
       if (response.ok) {
-        localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.USER, data.user?.id);
         router.push(ROUTES.DASHBOARD);
       } else {
         setError(data.error || ERROR_MESSAGES.INVALID_CREDENTIALS);

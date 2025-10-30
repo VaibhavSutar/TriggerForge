@@ -2,8 +2,8 @@ import { Workflow, ExecutionResult, WorkflowNode } from "./types.js";
 import { getConnector } from "@triggerforge/connectors";
 
 /**
- * Executes a workflow sequentially.
- * Input can be passed in; available as state.input
+ * Executes a workflow sequentially by following edges (ReactFlow-style).
+ * Automatically traverses the directed graph starting from a "start" node.
  */
 export async function executeWorkflow(
   workflow: Workflow,
@@ -13,22 +13,45 @@ export async function executeWorkflow(
   const state: Record<string, any> = { input };
   let lastOutput: any;
 
-  const index = new Map<string, WorkflowNode>();
-  for (const node of workflow.nodes) index.set(node.id, node);
+  // Build node map
+  const nodeMap = new Map<string, WorkflowNode>();
+  for (const node of workflow.nodes) nodeMap.set(node.id, node);
 
-  let current = workflow.startNode ? index.get(workflow.startNode) : workflow.nodes[0];
-  if (!current) return { success: false, logs: ["No starting node"], error: "No nodes found" };
+  // Build adjacency list (source → [targets])
+  const adjacency = new Map<string, string[]>();
+  for (const edge of workflow.edges ?? []) {
+    const targets = adjacency.get(edge.source) ?? [];
+    targets.push(edge.target);
+    adjacency.set(edge.source, targets);
+  }
 
-  while (current) {
+  // Find start node (prefer type "start" or data.nodeType = "start")
+  const startNode =
+    workflow.nodes.find(
+      (n) => n.type === "start" || n.data?.nodeType === "start"
+    ) ?? workflow.nodes[0];
+
+  if (!startNode)
+    return { success: false, logs: ["No start node found"], error: "No nodes found" };
+
+  const queue: WorkflowNode[] = [startNode];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
     try {
       logs.push(`Running node ${current.id} (${current.type})`);
 
-      const connector = getConnector(current.type);
+      const connector = getConnector(current.type || current.data?.nodeType);
       if (!connector) throw new Error(`Unsupported node type: ${current.type}`);
 
+      const config = current.config ?? current.data?.config ?? {};
       const { success, output } = await connector.run(
         { state, input, logs },
-        current.config ?? {}
+        config
       );
 
       if (!success) throw new Error(`Connector '${current.type}' failed`);
@@ -36,26 +59,21 @@ export async function executeWorkflow(
       state[current.id] = output;
       lastOutput = output;
 
-      // Handle next node
-      if (!current.next) {
-        logs.push("Workflow complete");
-        break;
+      // Find connected next nodes from edges
+      const nextIds = adjacency.get(current.id) ?? [];
+      for (const nextId of nextIds) {
+        const nextNode = nodeMap.get(nextId);
+        if (nextNode && !visited.has(nextNode.id)) queue.push(nextNode);
       }
-
-      const nextId = current.next;
-      const nextNode = index.get(nextId);
-      if (!nextNode) throw new Error(`Next node '${nextId}' not found`);
-
-      current = nextNode;
     } catch (err: any) {
-      logs.push(`Error in node ${current?.id ?? "unknown"}: ${err.message}`);
+      logs.push(`Error in node ${current.id}: ${err.message}`);
       return { success: false, logs, error: err.message, output: lastOutput };
     }
   }
 
+  logs.push("Workflow complete");
   return { success: true, logs, output: lastOutput };
 }
-
 
 /**
  * Helper: run workflow from JSON string

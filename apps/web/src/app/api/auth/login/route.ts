@@ -26,7 +26,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data, { status: response.status });
     }
 
-    return NextResponse.json(data);
+    // ✅ Set secure cookie after successful login
+    const res = NextResponse.json(data, { status: 200 });
+    if (data?.token) {
+      res.cookies.set('token', data.token, {
+        httpOnly: true,            // not accessible by JS (secure)
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,  // 7 days
+      });
+      console.log('✅ Token cookie set successfully');
+    } else {
+      console.warn('⚠️ No token found in response, cookie not set');
+    }
+
+    return res;
   } catch (error) {
     console.error('Login API error:', error);
     return NextResponse.json(

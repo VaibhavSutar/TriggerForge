@@ -7,6 +7,7 @@ import { PrismaClient } from '.prisma/client';
 import { authRoutes } from "./routes/auth";
 import { dbCheckRoute } from "./routes/db-check";
 import { workflowRoutes } from "./routes/workflow";
+import { connectorsRoutes } from "./routes/connectors";
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ export const prisma = new PrismaClient();
 app.register(authRoutes, { prefix: "/auth" });
 app.register(dbCheckRoute);
 app.register(workflowRoutes, { prefix: "/workflow" });
+app.register(connectorsRoutes, { prefix: "/connectors" });
+
 
 const start = async () => {
   try {

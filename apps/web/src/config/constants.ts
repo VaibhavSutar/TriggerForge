@@ -3,8 +3,15 @@ export enum API_ENDPOINTS {
   SIGNUP = '/auth/signup',   // Added /auth prefix
   ME = '/auth/me',          // Added /auth prefix
   WORKFLOWS = '/workflows',
-  CONNECTORS = '/connectors'
+  CONNECTORS = '/connectors',
+  
+  WORKFLOW_SAVE = "/workflow/save",            // upsert (create/update)
+  WORKFLOW_BY_ID = '/workflow/:id',
+  WORKFLOW_RUN = '/workflow/:id/run',
 }
+
+export const getWorkflowById = (id: string) => API_ENDPOINTS.WORKFLOW_BY_ID.replace(':id', id);
+export const getWorkflowRun = (id: string) => API_ENDPOINTS.WORKFLOW_RUN.replace(':id', id);
 
 export enum ROUTES {
   HOME = '/',
