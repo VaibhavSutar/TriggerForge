@@ -85,7 +85,25 @@ const defaultConfigs: Record<string, Record<string, any>> = {
   database: { query: "SELECT * FROM users" },
   random: { min: 1, max: 10 },
   trigger: { event: "manual" },
-  discord: { webhookUrl: "https://discord.com/api/webhooks/1234567890", message: "Hello from Discord!" },
+  discord: {
+    webhookUrl: "https://discord.com/api/webhooks/1234567890",
+    message: "Hello from Discord!",
+  },
+  email: {
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    email: "your-email@gmail.com",
+    password: "your-app-password",
+    from: "Your App <your-email@gmail.com>",
+    to: "recipient@example.com",
+    subject: "Workflow Notification",
+    body: `
+      <h2>Hello {{state.user.name}},</h2>
+      <p>Your task <strong>{{state.task.title}}</strong> has been completed successfully.</p>
+      <p>Regards,<br/>TriggerForge</p>
+    `,
+  },
 };
 
 /* ------------------------------------------------------------
@@ -138,25 +156,42 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
    * 🔧 Config Field Renderer
    * ----------------------------------- */
   const renderConfigInput = (key: string, value: any) => {
-    // Message fields use a textarea
-    if (key.toLowerCase() === "message") {
+    // Hide sensitive passwords
+    if (key.toLowerCase().includes("password")) {
       return (
         <div key={key} className="mb-2">
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Message
+            {key}
           </label>
-          <textarea
+          <input
+            type="password"
             value={value || ""}
             onChange={(e) => handleConfigUpdate(key, e.target.value)}
             className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            rows={2}
-            placeholder="Enter message text"
+            placeholder="Enter password"
           />
         </div>
       );
     }
 
-    // Number vs. text inputs
+    // Textarea for message or body
+    if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            {key}
+          </label>
+          <textarea
+            value={value || ""}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            rows={3}
+            placeholder={`Enter ${key}`}
+          />
+        </div>
+      );
+    }
+
     const inputType = typeof value === "number" ? "number" : "text";
     return (
       <div key={key} className="mb-2">
@@ -185,11 +220,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
   return (
     <div
       className={`
-      px-4 py-3 shadow-lg rounded-lg bg-white border-2 min-w-[180px] max-w-[280px]
-      transform transition-all duration-300 ease-in-out hover:scale-105
-      ${selected ? "border-blue-500 shadow-blue-200" : "border-gray-200 hover:border-gray-300"}
-      ${isConfigOpen ? "shadow-xl" : ""}
-    `}
+        px-4 py-3 shadow-lg rounded-lg bg-white border-2 min-w-[200px] max-w-[300px]
+        transform transition-all duration-300 ease-in-out hover:scale-[1.02]
+        ${selected ? "border-blue-500 shadow-blue-200" : "border-gray-200 hover:border-gray-300"}
+        ${isConfigOpen ? "shadow-xl" : ""}
+      `}
     >
       {/* Top handle */}
       <Handle
@@ -202,11 +237,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       {/* Header */}
       <div className="flex items-center space-x-3 mb-2">
         <div
-          className={`
-          p-2 rounded-full ${getNodeColor(data.nodeType)} text-white 
-          transform transition-all duration-300 ease-in-out
-          ${selected ? "scale-110 shadow-md" : ""}
-        `}
+          className={`${getNodeColor(
+            data.nodeType
+          )} p-2 rounded-full text-white transform transition-all duration-300 ${
+            selected ? "scale-110 shadow-md" : ""
+          }`}
         >
           {getNodeIcon(data.nodeType)}
         </div>
@@ -256,46 +291,47 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
 
         <button
           onClick={() => setIsConfigOpen(!isConfigOpen)}
-          className={`
-            p-1.5 rounded transition-all duration-200
-            ${isConfigOpen ? "bg-blue-100 text-blue-600" : "text-gray-500 hover:bg-gray-100"}
-          `}
+          className={`p-1.5 rounded transition-all duration-200 ${
+            isConfigOpen
+              ? "bg-blue-100 text-blue-600"
+              : "text-gray-500 hover:bg-gray-100"
+          }`}
         >
           <Settings className="w-3 h-3" />
         </button>
       </div>
 
-      {/* Configuration Panel */}
+      {/* Configuration Panel - expands fully */}
       <div
-        className={`
-        overflow-hidden transition-all duration-300 ease-in-out
-        ${isConfigOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}
-      `}
+        className={`transition-all duration-300 ease-in-out ${
+          isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
+        }`}
+        style={{ maxHeight: isConfigOpen ? "none" : 0 }}
       >
-        <div className="pt-2 border-t border-gray-100">
-          <div className="text-xs font-medium text-gray-700 mb-2">
-            Configuration
-          </div>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {Object.entries(defaultConfigs[data.nodeType] ?? tempConfig).map(
-              ([key, value]) =>
-                renderConfigInput(key, tempConfig[key] ?? value)
-            )}
+        {isConfigOpen && (
+          <div className="pt-2 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-700 mb-2">
+              Configuration
+            </div>
+            <div className="space-y-3">
+              {Object.entries(defaultConfigs[data.nodeType] ?? tempConfig).map(
+                ([key, value]) => renderConfigInput(key, tempConfig[key] ?? value)
+              )}
 
-            {/* Add new config field */}
-            <button
-              onClick={() => {
-                const newKey = prompt("Enter configuration key:");
-                if (newKey && !tempConfig[newKey]) {
-                  handleConfigUpdate(newKey, "");
-                }
-              }}
-              className="w-full py-1 text-xs text-blue-600 border border-dashed border-blue-300 rounded hover:bg-blue-50 transition-colors duration-200"
-            >
-              + Add Configuration
-            </button>
+              <button
+                onClick={() => {
+                  const newKey = prompt("Enter configuration key:");
+                  if (newKey && !tempConfig[newKey]) {
+                    handleConfigUpdate(newKey, "");
+                  }
+                }}
+                className="w-full py-1 text-xs text-blue-600 border border-dashed border-blue-300 rounded hover:bg-blue-50 transition-colors duration-200"
+              >
+                + Add Configuration
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Status indicator */}

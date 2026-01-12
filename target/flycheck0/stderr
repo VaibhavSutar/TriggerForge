@@ -1,0 +1,14 @@
+warning: virtual workspace defaulting to `resolver = "1"` despite one or more workspace members being on edition 2021 which implies `resolver = "2"`
+note: to keep the current resolver, specify `workspace.resolver = "1"` in the workspace root's manifest
+note: to use the edition 2021 resolver, specify `workspace.resolver = "2"` in the workspace root's manifest
+note: for more details see https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+    Updating crates.io index
+error: failed to select a version for `reqwest`.
+    ... required by package `triggerforge_core v0.1.0 (/Volumes/VaibhavT7/Vaibhav/SFIT/TriggerForge/packages/core)`
+versions that meet the requirements `^0.11` are: 0.11.27, 0.11.26, 0.11.25, 0.11.24, 0.11.23, 0.11.22, 0.11.21, 0.11.20, 0.11.19, 0.11.18, 0.11.17, 0.11.16, 0.11.15, 0.11.14, 0.11.13, 0.11.12, 0.11.11, 0.11.10, 0.11.9, 0.11.8, 0.11.7, 0.11.6, 0.11.5, 0.11.4, 0.11.3, 0.11.2, 0.11.1, 0.11.0
+
+package `triggerforge_core` depends on `reqwest` with feature `tls` but `reqwest` does not have that feature.
+ package `reqwest` does have feature `__tls`
+
+
+failed to select a version for `reqwest` which could resolve this conflict

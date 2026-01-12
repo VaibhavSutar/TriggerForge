@@ -14,7 +14,8 @@
     "react": "latest",
     "react-dom": "latest",
     "react-flow-renderer": "^10.3.17",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "tailwind-scrollbar": "^4.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

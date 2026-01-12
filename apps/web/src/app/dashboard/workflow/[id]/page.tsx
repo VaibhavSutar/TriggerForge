@@ -22,6 +22,7 @@ import { NodeSidebar } from "@/components/workflow/NodeSidebar";
 import type { ConnectorManifest } from "@/app/types/workflow";
 import { LOCAL_STORAGE_KEYS } from "@/config/constants";
 
+
 const nodeTypes: NodeTypes = { workflowNode: WorkflowNode };
 const initialNodes: Node[] = []; 
 const initialEdges: Edge[] = [];
@@ -42,6 +43,10 @@ export default function WorkflowEditor({
   const [runOutput, setRunOutput] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showRunPanel, setShowRunPanel] = useState(false);
+// Add to the start of WorkflowEditor component:
+
+
+// Add to the WorkflowToolbar section:
 
   // 🧩 Fetch workflow from backend
   const loadWorkflow = useCallback(async (id: string) => {
@@ -52,7 +57,7 @@ export default function WorkflowEditor({
       const data = await res.json();
       if (!data?.ok || !data?.workflow) throw new Error("Invalid workflow data");
 
-      const wf = data.workflow;
+    const wf = data.workflow;
 
       setWorkflowName(wf.name ?? `Workflow ${wf.id}`);
 

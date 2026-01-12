@@ -216,10 +216,10 @@ const list = await fetch(`/api/workflows?userId=${me.user.id}`, { cache: "no-sto
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
               />
             </div>
-            <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+            {/* <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Filter className="w-4 h-4" />
               <span>Filter</span>
-            </button>
+            </button> */}
           </div>
 
           <button

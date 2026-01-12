@@ -1,6 +1,11 @@
 
 # TriggerForge — Workflow Automation Platform (Turborepo)
 
+wcwespjlhowtnuby
+
+Discord Webhook:
+https://discord.com/api/webhooks/1432266289174548553/Vt0eRaxIvfbCc5cq7hGDoZsFEDfVrYK8n78mGpWOCNPDR3USD6ZXQPkjvd1RY4gkF2iI
+
 > Build, run and deploy a hybrid automation platform (web + desktop + self-hosted backend)
 > Stack: **Next.js (Web)**, **Tauri (Desktop)**, **Fastify + TypeScript (Server)**, **Prisma + Neon (DB)**, **Rust (core engine planned)**, managed in a **Turborepo**.
 
