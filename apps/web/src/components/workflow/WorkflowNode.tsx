@@ -188,14 +188,14 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     if (key.toLowerCase().includes("password")) {
       return (
         <div key={key} className="mb-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-300 mb-1">
             {key}
           </label>
           <input
             type="password"
             value={value || ""}
             onChange={(e) => handleConfigUpdate(key, e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none"
             placeholder="Enter password"
           />
         </div>
@@ -207,15 +207,15 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       const isConnected = !!value;
       return (
         <div key={key} className="mb-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
+          <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
             {key}
           </label>
           {isConnected ? (
-            <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded text-xs">
-              <span className="text-green-700 font-medium">Connected</span>
+            <div className="flex items-center justify-between p-2 bg-green-500/10 border border-green-500/20 rounded text-xs">
+              <span className="text-green-500 font-medium">Connected</span>
               <button
                 onClick={() => handleConfigUpdate(key, "")}
-                className="text-gray-400 hover:text-red-500"
+                className="text-gray-400 hover:text-red-400"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -256,9 +256,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
                 };
                 window.addEventListener('message', handler);
               }}
-              className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 bg-white border border-gray-300 rounded hover:bg-gray-50 text-xs font-medium text-gray-700 transition-colors"
+              className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 bg-[#0B0E14] border border-gray-700 rounded hover:bg-gray-800 text-xs font-medium text-gray-300 transition-colors"
             >
-              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <span className="w-2 h-2 rounded-full bg-gray-500" />
               <span>Connect Account</span>
             </button>
           )}
@@ -270,13 +270,13 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
       return (
         <div key={key} className="mb-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-gray-300 mb-1">
             {key}
           </label>
           <textarea
             value={value || ""}
             onChange={(e) => handleConfigUpdate(key, e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none"
             rows={3}
             placeholder={`Enter ${key}`}
           />
@@ -287,7 +287,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     const inputType = typeof value === "number" ? "number" : "text";
     return (
       <div key={key} className="mb-2">
-        <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
+        <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
           {key.replace(/([A-Z])/g, " $1").trim()}
         </label>
         <input
@@ -299,7 +299,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               inputType === "number" ? Number(e.target.value) : e.target.value
             )
           }
-          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none"
           placeholder={`Enter ${key} `}
         />
       </div>
@@ -311,10 +311,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
    * ------------------------------------------------------------ */
   return (
     <div
-      className={`
-px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] max - w - [300px]
-        transform transition - all duration - 300 ease -in -out hover: scale - [1.02]
-        ${selected ? "border-blue-500 shadow-blue-200" : "border-gray-200 hover:border-gray-300"}
+      className={`px-4 py-3 shadow-lg rounded-lg bg-[#151C2F] border-2 min-w-[200px] max-w-[300px]
+        transform transition-all duration-300 ease-in-out hover:scale-[1.02]
+        ${selected ? "border-[#3D5CFF] shadow-blue-900/20" : "border-gray-800 hover:border-gray-700"}
         ${isConfigOpen ? "shadow-xl" : ""}
 `}
     >
@@ -331,8 +330,7 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
         <div
           className={`${getNodeColor(
             data.nodeType
-          )
-            } p - 2 rounded - full text - white transform transition - all duration - 300 ${selected ? "scale-110 shadow-md" : ""
+          )} p-2 rounded-full text-white transform transition-all duration-300 ${selected ? "scale-110 shadow-md" : ""
             } `}
         >
           {getNodeIcon(data.nodeType)}
@@ -345,7 +343,7 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
                 type="text"
                 value={tempName}
                 onChange={(e) => setTempName(e.target.value)}
-                className="flex-1 text-sm font-medium bg-transparent border-b border-blue-500 focus:outline-none"
+                className="flex-1 text-sm font-medium bg-transparent text-white border-b border-[#3D5CFF] focus:outline-none"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleNameSave();
                   if (e.key === "Escape") handleNameCancel();
@@ -354,13 +352,13 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
               />
               <button
                 onClick={handleNameSave}
-                className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors duration-200"
+                className="p-1 text-green-500 hover:bg-green-500/10 rounded transition-colors duration-200"
               >
                 <Check className="w-3 h-3" />
               </button>
               <button
                 onClick={handleNameCancel}
-                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
+                className="p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors duration-200"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -370,22 +368,22 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
               className="flex items-center space-x-1 cursor-pointer group"
               onClick={() => setIsEditingName(true)}
             >
-              <div className="text-sm font-medium text-gray-900 truncate">
+              <div className="text-sm font-medium text-white truncate">
                 {data.label}
               </div>
-              <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              <Edit2 className="w-3 h-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
             </div>
           )}
-          <div className="text-xs text-gray-500 capitalize">
+          <div className="text-xs text-gray-400 capitalize">
             {data.nodeType}
           </div>
         </div>
 
         <button
           onClick={() => setIsConfigOpen(!isConfigOpen)}
-          className={`p - 1.5 rounded transition - all duration - 200 ${isConfigOpen
-            ? "bg-blue-100 text-blue-600"
-            : "text-gray-500 hover:bg-gray-100"
+          className={`p-1.5 rounded transition-all duration-200 ${isConfigOpen
+            ? "bg-[#3D5CFF]/20 text-[#3D5CFF]"
+            : "text-gray-500 hover:bg-gray-800"
             } `}
         >
           <Settings className="w-3 h-3" />
@@ -394,13 +392,13 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
 
       {/* Configuration Panel - expands fully */}
       <div
-        className={`transition - all duration - 300 ease -in -out ${isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
+        className={`transition-all duration-300 ease-in-out ${isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
           } `}
         style={{ maxHeight: isConfigOpen ? "none" : 0 }}
       >
         {isConfigOpen && (
-          <div className="pt-2 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-700 mb-2">
+          <div className="pt-2 border-t border-gray-800">
+            <div className="text-xs font-medium text-gray-300 mb-2">
               Configuration
             </div>
             <div className="space-y-3">
@@ -415,7 +413,7 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
                     handleConfigUpdate(newKey, "");
                   }
                 }}
-                className="w-full py-1 text-xs text-blue-600 border border-dashed border-blue-300 rounded hover:bg-blue-50 transition-colors duration-200"
+                className="w-full py-1 text-xs text-[#3D5CFF] border border-dashed border-[#3D5CFF]/30 rounded hover:bg-[#3D5CFF]/10 transition-colors duration-200"
               >
                 + Add Configuration
               </button>
@@ -425,13 +423,13 @@ px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] m
       </div>
 
       {/* Status indicator */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-800">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-500">Ready</span>
+          <span className="text-xs text-gray-400">Ready</span>
         </div>
         {Object.keys(tempConfig).length > 0 && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500">
             {Object.keys(tempConfig).length} config
             {Object.keys(tempConfig).length !== 1 ? "s" : ""}
           </span>

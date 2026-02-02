@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useState, useEffect } from "react";
+import { X } from "lucide-react";
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -195,8 +196,7 @@ export default function WorkflowEditor({
       ...prev,
       ...logs.map(
         (l: any) =>
-          `[${l.nodeId}] ${l.message} ${
-            l.data ? JSON.stringify(l.data) : ""
+          `[${l.nodeId}] ${l.message} ${l.data ? JSON.stringify(l.data) : ""
           }`
       ),
       "✅ Workflow completed",
@@ -207,8 +207,9 @@ export default function WorkflowEditor({
 
   if (!workflowId) return null;
 
+
   return (
-    <div className="h-screen w-full flex bg-white relative">
+    <div className="h-screen w-full flex bg-[#0B0E14] relative text-white">
       <div className="flex-1">
         <WorkflowToolbar
           workflowName={workflowName}
@@ -227,10 +228,11 @@ export default function WorkflowEditor({
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
           fitView
+          className="bg-[#0B0E14]"
         >
-          <MiniMap />
-          <Controls />
-          <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+          <MiniMap style={{ background: '#151C2F', border: '1px solid #1f2937' }} nodeColor="#3D5CFF" />
+          {/* <Controls style={{ background: '#151C2F', border: '1px solid #1f2937', fill: 'white' }} /> */}
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#374151" />
         </ReactFlow>
       </div>
 
@@ -241,15 +243,26 @@ export default function WorkflowEditor({
       />
 
       {showRunPanel && (
-        <div className="absolute bottom-0 left-0 right-0 bg-black text-white p-3 max-h-[40vh] overflow-y-auto text-xs font-mono">
-          {runLogs.map((l, i) => (
-            <div key={i}>{l}</div>
-          ))}
-          {runOutput && (
-            <pre className="mt-2 bg-gray-900 p-2 rounded">
-              {JSON.stringify(runOutput, null, 2)}
-            </pre>
-          )}
+        <div className="absolute bottom-0 left-0 right-0 bg-[#151C2F] border-t border-gray-800 text-white flex flex-col max-h-[40vh] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-[#151C2F]">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Run Logs</span>
+            <button
+              onClick={() => setShowRunPanel(false)}
+              className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-white/10 rounded"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-3 overflow-y-auto font-mono text-xs">
+            {runLogs.map((l, i) => (
+              <div key={i} className="text-gray-300 mb-1">{l}</div>
+            ))}
+            {runOutput && (
+              <pre className="mt-2 bg-[#0B0E14] border border-gray-800 p-2 rounded text-green-400">
+                {JSON.stringify(runOutput, null, 2)}
+              </pre>
+            )}
+          </div>
         </div>
       )}
     </div>
