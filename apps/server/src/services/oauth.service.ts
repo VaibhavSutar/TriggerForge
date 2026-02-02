@@ -20,11 +20,19 @@ export class OAuthService {
         }
     }
 
-    getGoogleAuthUrl(scopes: string[] = ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/gmail.readonly"]) {
+    getGoogleAuthUrl(scopes: string[] = [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive.readonly"
+    ]) {
         if (!this.googleClient) throw new Error("Google OAuth not configured");
         return this.googleClient.generateAuthUrl({
             access_type: "offline",
             scope: scopes,
+            prompt: "consent", // Force refresh token
         });
     }
 
@@ -43,5 +51,26 @@ export class OAuthService {
         );
         client.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
         return client;
+    }
+
+    async listFiles(accessToken: string, refreshToken?: string, mimeType?: string) {
+        const auth = await this.getGoogleClient(accessToken, refreshToken);
+        const drive = google.drive({ version: 'v3', auth });
+
+        // Filter by mimeType if provided, and restrict to non-trashed files
+        let q = "trashed = false";
+        if (mimeType) {
+            // "mimeType = 'application/vnd.google-apps.spreadsheet'" for Sheets
+            // "mimeType = 'application/vnd.google-apps.document'" for Docs
+            q += ` and mimeType = '${mimeType}'`;
+        }
+
+        const res = await drive.files.list({
+            q,
+            fields: 'files(id, name, mimeType)',
+            pageSize: 20
+        });
+
+        return res.data.files || [];
     }
 }

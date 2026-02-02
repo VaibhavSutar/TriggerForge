@@ -68,6 +68,11 @@ export async function authRoutes(app: FastifyInstance) {
 
       // Store in DB
       if (state && tokens.access_token) {
+        const userExists = await prisma.user.findUnique({ where: { id: state } });
+        if (!userExists) {
+          return res.status(404).send(`User not found (invalid userId: ${state}). Please log in again.`);
+        }
+
         await prisma.credential.upsert({
           where: {
             userId_provider: {

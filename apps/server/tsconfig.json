@@ -7,8 +7,13 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "extends": "../../tsconfig.json",
-  "include": ["src"]
+  "include": [
+    "src",
+    "scripts"
+  ]
 }

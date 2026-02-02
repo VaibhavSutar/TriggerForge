@@ -130,8 +130,8 @@ const defaultConfigs: Record<string, Record<string, any>> = {
   ai: { prompt: "Write a poem", model: "gpt-4o", system: "You are a helpful assistant." },
   mcp_tool: { serverName: "filesystem", toolName: "read_file", args: { path: "/tmp/test" } },
   google_gmail: { credential: "", to: "", subject: "", body: "" },
-  google_sheets: { credential: "", operation: "read", spreadsheetId: "", range: "Sheet1!A1:B10", values: "" },
-  google_docs: { credential: "", operation: "read", documentId: "", content: "" },
+  google_sheets: { credential: "", operation: "read_sheet", spreadsheetId: "", range: "Sheet1!A1:B10", values: "" },
+  google_docs: { credential: "", operation: "read_text", documentId: "", content: "" },
 };
 
 /* ------------------------------------------------------------
@@ -144,6 +144,69 @@ interface NodeData {
   config: Record<string, any>;
   onUpdate?: (id: string, data: Partial<NodeData>) => void;
 }
+
+/* ------------------------------------------------------------
+ * 🔹 SUB-COMPONENTS
+ * ------------------------------------------------------------ */
+
+const FileSelector = ({
+  nodeType,
+  value,
+  onChange
+}: {
+  nodeType: string;
+  value: string;
+  onChange: (val: string) => void;
+}) => {
+  const [files, setFiles] = useState<any[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
+  const fetchFiles = async () => {
+    setIsLoadingFiles(true);
+    const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+    let mimeType = "";
+    if (nodeType === "google_sheets") mimeType = "application/vnd.google-apps.spreadsheet";
+    else if (nodeType === "google_docs") mimeType = "application/vnd.google-apps.document";
+
+    try {
+      const res = await fetch(`http://localhost:4000/connectors/google/files?userId=${userId}&mimeType=${mimeType}`);
+      const json = await res.json();
+      if (json.ok) {
+        setFiles(json.files);
+      } else {
+        alert("Failed to load files: " + json.error);
+      }
+    } catch (err: any) {
+      alert("Error loading files: " + err.message);
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  };
+
+  return (
+    <div className="flex space-x-2">
+      <select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 nodrag"
+      >
+        <option value="">Select a file...</option>
+        {files.map((f: any) => (
+          <option key={f.id} value={f.id}>{f.name}</option>
+        ))}
+        {value && !files.find(f => f.id === value) && <option value={value}>{value}</option>}
+      </select>
+      <button
+        onClick={fetchFiles}
+        disabled={isLoadingFiles}
+        className="px-2 py-1 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 text-xs nodrag"
+        title="Refresh File List"
+      >
+        {isLoadingFiles ? "..." : "↻"}
+      </button>
+    </div>
+  );
+};
 
 /* ------------------------------------------------------------
  * 🔹 COMPONENT
@@ -211,7 +274,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
             {key}
           </label>
           {isConnected ? (
-            <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded text-xs">
+            <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded text-xs nodrag">
               <span className="text-green-700 font-medium">Connected</span>
               <button
                 onClick={() => handleConfigUpdate(key, "")}
@@ -256,7 +319,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
                 };
                 window.addEventListener('message', handler);
               }}
-              className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 bg-white border border-gray-300 rounded hover:bg-gray-50 text-xs font-medium text-gray-700 transition-colors"
+              className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 bg-white border border-gray-300 rounded hover:bg-gray-50 text-xs font-medium text-gray-700 transition-colors nodrag"
             >
               <span className="w-2 h-2 rounded-full bg-gray-400" />
               <span>Connect Account</span>
@@ -265,6 +328,60 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
         </div>
       );
     }
+
+    // 3. Operation Selection
+    if (key === "operation") {
+      let options: string[] = [];
+      if (data.nodeType === "google_sheets") {
+        options = ["read_sheet", "append_row", "clear_sheet"];
+      } else if (data.nodeType === "google_docs") {
+        options = ["create_doc", "read_text", "append_text"];
+      } else {
+        // fallback or generic operations
+        options = ["read", "write", "update", "delete"];
+      }
+
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">Operation</label>
+          <select
+            value={value || ""}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 nodrag"
+          >
+            {options.map(opt => (
+              <option key={opt} value={opt}>{opt.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    // 4. File Selection (Spreadsheet/Docs)
+    if (["spreadsheetId", "documentId", "fileId"].includes(key)) {
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
+            {key.replace(/([A-Z])/g, " $1").trim()}
+          </label>
+          <div className="nodrag">
+            <FileSelector
+              nodeType={data.nodeType}
+              value={value}
+              onChange={(val) => handleConfigUpdate(key, val)}
+            />
+          </div>
+          <input
+            type="text"
+            value={value || ""}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full mt-1 px-2 py-1 text-xs border border-gray-300 rounded text-gray-400 nodrag"
+            placeholder="Or enter ID manually"
+          />
+        </div>
+      );
+    }
+
 
     // Textarea for message or body
     if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
@@ -276,7 +393,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
           <textarea
             value={value || ""}
             onChange={(e) => handleConfigUpdate(key, e.target.value)}
-            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 nodrag"
             rows={3}
             placeholder={`Enter ${key}`}
           />
@@ -299,7 +416,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               inputType === "number" ? Number(e.target.value) : e.target.value
             )
           }
-          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 nodrag"
           placeholder={`Enter ${key} `}
         />
       </div>

@@ -5,10 +5,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('Login request body:', body);
-    
+
     const apiUrl = buildApiUrl(API_ENDPOINTS.LOGIN);
     console.log('Calling API URL:', apiUrl);
-    
+
     // Forward to your Fastify server using constants
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-    });
+    })
 
     const data = await response.json();
     console.log('Server response status:', response.status);
