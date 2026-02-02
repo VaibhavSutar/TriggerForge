@@ -1,7 +1,8 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../prisma";
-import { executeWorkflow } from "@triggerforge/core";
+import { executeWorkflowFromJson } from "@triggerforge/core";
 import type { Workflow as CoreWorkflow } from "@triggerforge/core";
+import { aiService, mcpManager, oauthService } from "../services";
 
 /** Route types */
 type SaveBody = {
@@ -249,41 +250,55 @@ export async function workflowRoutes(app: FastifyInstance) {
       const workflowRecord = await prisma.workflow.findFirst({
         where: workflowWhere(id, userId),
       });
-      if (!workflowRecord)
+
+      if (!workflowRecord) {
         return reply
           .code(404)
           .send({ ok: false, error: "Workflow not found for this user" });
+      }
 
-      // Prisma json fields are typed as JsonValue; cast via unknown first to satisfy TypeScript
-      const wfJson = workflowRecord.json as unknown as {
-        nodes: CoreWorkflow["nodes"];
-        edges?: CoreWorkflow["edges"];
-      };
-
-      const coreWorkflow: CoreWorkflow = {
-        id: workflowRecord.id,
-        name: workflowRecord.name,
-        nodes: wfJson.nodes,
-        edges: wfJson.edges,
-        userId: workflowRecord.userId,
+      const workflowJson = workflowRecord.json as {
+        nodes: any[];
+        edges?: any[];
       };
 
       const input = req.body ?? {};
-      const result = await executeWorkflow(coreWorkflow, input);
+
+      const result = await executeWorkflowFromJson(
+        {
+          id: workflowRecord.id,
+          nodes: workflowJson.nodes,
+          edges: workflowJson.edges,
+        },
+        input,
+        {
+          ai: aiService,
+          mcp: mcpManager,
+          oauth: oauthService,
+        }
+      );
 
       const execution = await prisma.execution.create({
         data: {
           workflowId: workflowRecord.id,
-          status: (result as any)?.success ? "SUCCEEDED" : "FAILED",
+          status: result.success ? "SUCCEEDED" : "FAILED",
           input,
-          output: JSON.parse(JSON.stringify(result ?? {})),
+          output: result.context.nodeResults,
+          // logs: result.context.logs, // Removed because 'logs' is not a valid field
         },
       });
 
-      return reply.send({ ok: true, executionId: execution.id, result });
+      return reply.send({
+        ok: true,
+        executionId: execution.id,
+        result,
+      });
     } catch (error) {
       app.log.error(error, "Error running workflow");
-      return reply.code(500).send({ ok: false, error: "Failed to run workflow" });
+      return reply
+        .code(500)
+        .send({ ok: false, error: "Failed to run workflow" });
     }
   });
+
 }

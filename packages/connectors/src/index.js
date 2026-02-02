@@ -31,6 +31,9 @@ const random_js_1 = require("./connectors/random.js");
 const file_js_1 = require("./connectors/file.js");
 const discord_webhook_js_1 = require("./connectors/discord_webhook.js");
 const startConnector_js_1 = require("./connectors/startConnector.js");
+const ai_js_1 = require("./connectors/ai.js");
+const mcpTool_js_1 = require("./connectors/mcpTool.js");
+const google_js_1 = require("./connectors/google.js");
 /** Base registry: keys are our canonical ids (lowercase, no spaces, no hyphens/underscores). */
 exports.connectors = {
     print: print_js_1.printConnector,
@@ -46,7 +49,10 @@ exports.connectors = {
     // Important: choose ONE canonical key; id inside the connector can be "discord_webhook" etc.,
     // but our registry key should be normalized (no hyphen/underscore) for simpler lookups.
     discordwebhook: discord_webhook_js_1.discordWebhookConnector,
-    startConnector: startConnector_js_1.startConnector
+    start: startConnector_js_1.startConnector,
+    ai: ai_js_1.aiConnector,
+    mcp_tool: mcpTool_js_1.mcpToolConnector,
+    google_gmail: google_js_1.googleGmailConnector,
 };
 /** Normalize any incoming id/name into a canonical lookup key. */
 function normalizeKey(s) {

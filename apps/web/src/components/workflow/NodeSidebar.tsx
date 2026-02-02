@@ -37,8 +37,8 @@ export function NodeSidebar({
             c.type === "trigger"
               ? "trigger"
               : c.type === "action"
-              ? "action"
-              : "action", // treat unknown as action
+                ? "action"
+                : "action", // treat unknown as action
           defaultConfig: c.defaultConfig || {},
         }));
 
@@ -57,7 +57,11 @@ export function NodeSidebar({
       { id: "trigger", title: "Start Trigger", kind: "trigger", defaultConfig: { event: "manual" } },
       { id: "print", title: "Print", kind: "action", defaultConfig: { message: "Hello World!" } },
       { id: "delay", title: "Delay", kind: "action", defaultConfig: { ms: 1000 } },
+      { id: "delay", title: "Delay", kind: "action", defaultConfig: { ms: 1000 } },
       { id: "http", title: "HTTP Request", kind: "action", defaultConfig: { url: "https://api.example.com", method: "GET" } },
+      { id: "ai", title: "AI Text Gen", kind: "action", defaultConfig: { prompt: "Explain quantum physics", model: "gpt-4o" } },
+      { id: "mcp_tool", title: "MCP Tool Call", kind: "action", defaultConfig: { serverName: "filesystem", toolName: "list_files", args: {} } },
+      { id: "google_gmail", title: "Gmail: Send", kind: "action", defaultConfig: { to: "user@example.com", subject: "Hello", body: "Message" } },
     ],
     []
   );

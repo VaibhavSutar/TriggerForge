@@ -4,17 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc -p tsconfig.json", 
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "generate": "prisma generate --schema=../../database/prisma/schema.prisma"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
+    "@modelcontextprotocol/sdk": "^1.25.3",
     "@prisma/client": "^6.18.0",
+    "@triggerforge/core": "workspace:*",
+    "@types/node-cron": "^3.0.11",
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.3",
     "fastify": "^4.29.1",
+    "googleapis": "^171.0.0",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
+    "openai": "^6.17.0",
     "zod": "^3.0.0"
   },
   "devDependencies": {
@@ -22,7 +28,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.9.1",
     "@types/uuid": "^11.0.0",
-    "prisma": "^5.22.0",
+    "prisma": "^6.18.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.0"
   }

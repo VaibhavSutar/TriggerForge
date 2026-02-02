@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../../apps/server/node_modules/.prisma/client"
+  output   = "../../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -20,6 +20,7 @@ model User {
 
   transactions CreditTransaction[]
   workflows    Workflow[]                 // 👈 user owns workflows
+  credentials  Credential[]
 }
 
 model CreditTransaction {
@@ -62,7 +63,22 @@ model Execution {
   status      ExecutionStatus @default(PENDING)   // 👈 enum instead of free string
   input       Json?
   output      Json?
+  logs        Json?
   createdAt   DateTime        @default(now())
 
   @@index([workflowId])
+}
+
+model Credential {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String   // e.g. "google"
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, provider])
 }

@@ -11,23 +11,26 @@ exports.emailConnector = {
     name: "Send Email (SMTP)",
     type: "action",
     async run(ctx, config) {
-        const { smtp, from, to, subject, body } = config;
-        if (!smtp || !smtp.host)
-            throw new Error("SMTP configuration missing");
+        const { host, port, secure, email, password, from, to, subject, body } = config;
+        if (!email || !password)
+            throw new Error("Email or password missing");
         const renderedBody = mustache_1.default.render(body || "", { state: ctx.state, ...ctx.state });
         const transporter = nodemailer_1.default.createTransport({
-            host: smtp.host,
-            port: smtp.port ?? 587,
-            secure: smtp.secure ?? false,
-            auth: smtp.auth
+            host,
+            port: port ?? 587,
+            secure: secure ?? false,
+            auth: {
+                user: email,
+                pass: password,
+            },
         });
         await transporter.sendMail({
             from,
             to,
             subject,
-            html: renderedBody
+            html: renderedBody,
         });
         ctx.logs.push(`[email] sent to ${to}`);
         return { success: true, output: `Email sent to ${to}` };
-    }
+    },
 };

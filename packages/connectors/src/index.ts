@@ -11,6 +11,11 @@ import { fileConnector } from "./connectors/file.js";
 import { discordWebhookConnector } from "./connectors/discord_webhook.js";
 import type { Connector } from "./types.js";
 import { startConnector } from "./connectors/startConnector.js";
+import { aiConnector } from "./connectors/ai.js";
+import { mcpToolConnector } from "./connectors/mcpTool.js";
+import { googleGmailConnector } from "./connectors/google.js";
+import { googleSheetsConnector } from "./connectors/googleSheets.js";
+import { googleDocsConnector } from "./connectors/googleDocs.js";
 
 /** Base registry: keys are our canonical ids (lowercase, no spaces, no hyphens/underscores). */
 export const connectors: Record<string, Connector> = {
@@ -27,7 +32,12 @@ export const connectors: Record<string, Connector> = {
   // Important: choose ONE canonical key; id inside the connector can be "discord_webhook" etc.,
   // but our registry key should be normalized (no hyphen/underscore) for simpler lookups.
   discordwebhook: discordWebhookConnector,
-  startConnector : startConnector
+  start: startConnector,
+  ai: aiConnector,
+  mcp_tool: mcpToolConnector,
+  google_gmail: googleGmailConnector,
+  google_sheets: googleSheetsConnector,
+  google_docs: googleDocsConnector,
 };
 
 /** Normalize any incoming id/name into a canonical lookup key. */

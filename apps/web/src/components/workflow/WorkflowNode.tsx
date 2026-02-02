@@ -15,6 +15,11 @@ import {
   Edit2,
   Check,
   X,
+  Bot,
+  Terminal,
+  Mail as MailIcon,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 
 /* ------------------------------------------------------------
@@ -43,6 +48,16 @@ const getNodeIcon = (nodeType: string) => {
       return <Clock className="w-4 h-4" />;
     case "random":
       return <Settings className="w-4 h-4" />;
+    case "ai":
+      return <Bot className="w-4 h-4" />;
+    case "mcp_tool":
+      return <Terminal className="w-4 h-4" />;
+    case "google_gmail":
+      return <MailIcon className="w-4 h-4" />;
+    case "google_sheets":
+      return <FileSpreadsheet className="w-4 h-4" />;
+    case "google_docs":
+      return <FileText className="w-4 h-4" />;
     default:
       return <Settings className="w-4 h-4" />;
   }
@@ -68,6 +83,16 @@ const getNodeColor = (nodeType: string) => {
       return "bg-orange-500";
     case "random":
       return "bg-indigo-500";
+    case "ai":
+      return "bg-rose-500";
+    case "mcp_tool":
+      return "bg-teal-500";
+    case "google_gmail":
+      return "bg-red-600";
+    case "google_sheets":
+      return "bg-green-600";
+    case "google_docs":
+      return "bg-blue-600";
     default:
       return "bg-gray-500";
   }
@@ -99,11 +124,14 @@ const defaultConfigs: Record<string, Record<string, any>> = {
     to: "recipient@example.com",
     subject: "Workflow Notification",
     body: `
-      <h2>Hello {{state.user.name}},</h2>
       <p>Your task <strong>{{state.task.title}}</strong> has been completed successfully.</p>
-      <p>Regards,<br/>TriggerForge</p>
-    `,
+      <p>Regards,<br/>TriggerForge</p>    `,
   },
+  ai: { prompt: "Write a poem", model: "gpt-4o", system: "You are a helpful assistant." },
+  mcp_tool: { serverName: "filesystem", toolName: "read_file", args: { path: "/tmp/test" } },
+  google_gmail: { credential: "", to: "", subject: "", body: "" },
+  google_sheets: { credential: "", operation: "read", spreadsheetId: "", range: "Sheet1!A1:B10", values: "" },
+  google_docs: { credential: "", operation: "read", documentId: "", content: "" },
 };
 
 /* ------------------------------------------------------------
@@ -174,6 +202,70 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
+    // Credential / Connection UI
+    if (key === "credential" || key === "connection") {
+      const isConnected = !!value;
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
+            {key}
+          </label>
+          {isConnected ? (
+            <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded text-xs">
+              <span className="text-green-700 font-medium">Connected</span>
+              <button
+                onClick={() => handleConfigUpdate(key, "")}
+                className="text-gray-400 hover:text-red-500"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                // Real OAuth Pop-up
+                const width = 500;
+                const height = 600;
+                const left = window.screen.width / 2 - width / 2;
+                const top = window.screen.height / 2 - height / 2;
+
+                // Construct Authentication URL
+                const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+                const authUrl = `http://localhost:4000/auth/google?userId=${userId}`;
+
+                const popup = window.open(
+                  authUrl,
+                  "Connect Google",
+                  `width=${width},height=${height},top=${top},left=${left}`
+                );
+
+                const interval = setInterval(() => {
+                  if (popup?.closed) {
+                    clearInterval(interval);
+                  }
+                }, 1000);
+
+                // Listen for success message
+                const handler = (event: MessageEvent) => {
+                  if (event.data?.type === 'OAUTH_SUCCESS' && event.data?.provider === 'google') {
+                    clearInterval(interval);
+                    handleConfigUpdate(key, "connected");
+                    alert("Successfully connected to Google!");
+                    window.removeEventListener('message', handler);
+                  }
+                };
+                window.addEventListener('message', handler);
+              }}
+              className="w-full flex items-center justify-center space-x-2 py-1.5 px-3 bg-white border border-gray-300 rounded hover:bg-gray-50 text-xs font-medium text-gray-700 transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              <span>Connect Account</span>
+            </button>
+          )}
+        </div>
+      );
+    }
+
     // Textarea for message or body
     if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
       return (
@@ -208,7 +300,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
             )
           }
           className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-          placeholder={`Enter ${key}`}
+          placeholder={`Enter ${key} `}
         />
       </div>
     );
@@ -220,11 +312,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
   return (
     <div
       className={`
-        px-4 py-3 shadow-lg rounded-lg bg-white border-2 min-w-[200px] max-w-[300px]
-        transform transition-all duration-300 ease-in-out hover:scale-[1.02]
+px - 4 py - 3 shadow - lg rounded - lg bg - white border - 2 min - w - [200px] max - w - [300px]
+        transform transition - all duration - 300 ease -in -out hover: scale - [1.02]
         ${selected ? "border-blue-500 shadow-blue-200" : "border-gray-200 hover:border-gray-300"}
         ${isConfigOpen ? "shadow-xl" : ""}
-      `}
+`}
     >
       {/* Top handle */}
       <Handle
@@ -239,9 +331,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
         <div
           className={`${getNodeColor(
             data.nodeType
-          )} p-2 rounded-full text-white transform transition-all duration-300 ${
-            selected ? "scale-110 shadow-md" : ""
-          }`}
+          )
+            } p - 2 rounded - full text - white transform transition - all duration - 300 ${selected ? "scale-110 shadow-md" : ""
+            } `}
         >
           {getNodeIcon(data.nodeType)}
         </div>
@@ -291,11 +383,10 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
 
         <button
           onClick={() => setIsConfigOpen(!isConfigOpen)}
-          className={`p-1.5 rounded transition-all duration-200 ${
-            isConfigOpen
-              ? "bg-blue-100 text-blue-600"
-              : "text-gray-500 hover:bg-gray-100"
-          }`}
+          className={`p - 1.5 rounded transition - all duration - 200 ${isConfigOpen
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-500 hover:bg-gray-100"
+            } `}
         >
           <Settings className="w-3 h-3" />
         </button>
@@ -303,9 +394,8 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
 
       {/* Configuration Panel - expands fully */}
       <div
-        className={`transition-all duration-300 ease-in-out ${
-          isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
-        }`}
+        className={`transition - all duration - 300 ease -in -out ${isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
+          } `}
         style={{ maxHeight: isConfigOpen ? "none" : 0 }}
       >
         {isConfigOpen && (

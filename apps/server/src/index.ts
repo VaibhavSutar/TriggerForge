@@ -1,13 +1,15 @@
 import Fastify from "fastify";
-import fastifyCors from "@fastify/cors"; 
+import fastifyCors from "@fastify/cors";
 import * as dotenv from "dotenv";
 dotenv.config();
-import { PrismaClient } from '.prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import { authRoutes } from "./routes/auth";
 import { dbCheckRoute } from "./routes/db-check";
 import { workflowRoutes } from "./routes/workflow";
 import { connectorsRoutes } from "./routes/connectors";
+import { hookRoutes } from "./routes/hooks";
+import { triggerService } from "./services";
 
 dotenv.config();
 
@@ -22,11 +24,16 @@ app.register(authRoutes, { prefix: "/auth" });
 app.register(dbCheckRoute);
 app.register(workflowRoutes, { prefix: "/workflow" });
 app.register(connectorsRoutes, { prefix: "/connectors" });
+app.register(hookRoutes, { prefix: "/hooks" });
 
 
 const start = async () => {
   try {
     await app.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" });
+
+    // Initialize Triggers (Cron)
+    await triggerService.initialize();
+
     console.log(`🚀 Server running on http://localhost:${process.env.PORT || 4000}`);
   } catch (err) {
     app.log.error(err);

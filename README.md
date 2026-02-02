@@ -4,7 +4,7 @@
 wcwespjlhowtnuby
 
 Discord Webhook:
-https://discord.com/api/webhooks/1432266289174548553/Vt0eRaxIvfbCc5cq7hGDoZsFEDfVrYK8n78mGpWOCNPDR3USD6ZXQPkjvd1RY4gkF2iI
+<!-- https://discord.com/api/webhooks/1432266289174548553/Vt0eRaxIvfbCc5cq7hGDoZsFEDfVrYK8n78mGpWOCNPDR3USD6ZXQPkjvd1RY4gkF2iI -->
 
 > Build, run and deploy a hybrid automation platform (web + desktop + self-hosted backend)
 > Stack: **Next.js (Web)**, **Tauri (Desktop)**, **Fastify + TypeScript (Server)**, **Prisma + Neon (DB)**, **Rust (core engine planned)**, managed in a **Turborepo**.
@@ -97,7 +97,7 @@ triggerforge/
 
 * Node.js `>=20.9.0` (use `nvm` recommended)
 * pnpm (global): `npm i -g pnpm`
-* Rust + cargo (for `packages/core` & Tauri): `rustup`
+* Rust + cargo (for `packages/core` & Tauri): `rustup`bui
 * Tauri build deps if you plan desktop packaging (platform specific)
 * A Neon (Postgres) account for cloud DB (optional for local SQLite)
 * Docker not required (we support Docker later if you want to add it)

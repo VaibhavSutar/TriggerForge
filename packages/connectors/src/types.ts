@@ -1,12 +1,14 @@
 export interface ConnectorContext {
   state: Record<string, any>;
   input?: any;
-  logs: string[];
+  logs: any[];
+  services?: Record<string, any>; // [NEW] injected services
 }
 
 export interface ConnectorResult {
   success: boolean;
   output: any;
+  error?: string;
 }
 
 export interface Connector {

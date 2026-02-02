@@ -4,7 +4,7 @@ export enum API_ENDPOINTS {
   ME = '/auth/me',          // Added /auth prefix
   WORKFLOWS = '/workflows',
   CONNECTORS = '/connectors',
-  
+
   WORKFLOW_SAVE = "/workflow/save",            // upsert (create/update)
   WORKFLOW_BY_ID = '/workflow/:id',
   WORKFLOW_RUN = '/workflow/:id/run',
@@ -55,7 +55,7 @@ export enum SUCCESS_MESSAGES {
 // Configuration object
 export const CONFIG = {
   API: {
-    BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000',
     TIMEOUT: 10000
   },
   JWT: {
@@ -77,7 +77,7 @@ export const getRoute = (route: ROUTES): string => {
   return route;
 };
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
 
 export const WORKFLOW_NODE_TYPES = {
   TRIGGER: 'trigger',

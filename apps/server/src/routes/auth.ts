@@ -44,4 +44,67 @@ export async function authRoutes(app: FastifyInstance) {
       return res.status(401).send({ error: "Invalid token" });
     }
   });
+
+  // Google OAuth Init
+  app.get("/google", async (req, res) => {
+    const { userId } = req.query as { userId: string };
+    if (!userId) return res.status(400).send({ error: "Missing userId" });
+
+    // Pass userId as state to survive the redirect
+    const url = await import("../services").then(s => s.oauthService.getGoogleAuthUrl());
+    const authUrl = `${url}&state=${userId}`;
+
+    return res.redirect(authUrl);
+  });
+
+  // Google OAuth Callback
+  app.get("/google/callback", async (req, res) => {
+    const { code, state } = req.query as { code: string, state: string };
+    if (!code) return res.status(400).send({ error: "Missing code" });
+
+    const { oauthService } = await import("../services");
+    try {
+      const tokens = await oauthService.exchangeGoogleCode(code);
+
+      // Store in DB
+      if (state && tokens.access_token) {
+        await prisma.credential.upsert({
+          where: {
+            userId_provider: {
+              userId: state,
+              provider: "google"
+            }
+          },
+          update: {
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token || undefined,
+            expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
+            updatedAt: new Date(),
+          },
+          create: {
+            userId: state,
+            provider: "google",
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined
+          }
+        });
+      }
+
+      res.type('text/html').send(`
+        <html>
+        <body>
+          <h3>Connected!</h3>
+          <script>
+            window.opener.postMessage({ type: 'OAUTH_SUCCESS', provider: 'google' }, '*');
+            window.close();
+          </script>
+        </body>
+        </html>
+      `);
+    } catch (err: any) {
+      console.error("OAuth Error", err);
+      res.status(500).send(`Authentication failed: ${err.message}`);
+    }
+  });
 }

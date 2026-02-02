@@ -1,32 +1,98 @@
-export type NodeConfig = Record<string, any>;
+// types.ts
 
-export interface WorkflowNode {
-  id: string;
-  type: string; // "print", "http", etc.
-  config?: NodeConfig;
-  next?: string;
-  data?: Record<string, any>;
+export type NodeId = string;
+export type NodeType = string;
+
+/* ----------------------------------
+   Workflow Context (shared state)
+----------------------------------- */
+export interface WorkflowContext {
+  input: any;
+  state: Record<string, any>;
+  nodeResults: Record<string, any>;
+  logs: {
+    nodeId: string;
+    message: string;
+    data?: any;
+    timestamp: number;
+  }[];
+  services?: Record<string, any>; // [NEW] Dependency injection
 }
 
-export interface Workflow {
-  id?: string;
-  name?: string;
-  userId: string;
-  data?: Record<string, any>;
-  nodes: WorkflowNode[];
-  startNode?: string;
-  edges?: Edge[];
+/* ----------------------------------
+   Logs
+----------------------------------- */
+export interface WorkflowLog {
+  nodeId: NodeId;
+  message: string;
+  data?: any;
+  timestamp: number;
 }
-export interface Edge {
-  id: string;
-  from: string;
-  to: string;
-  source: string;
-  target: string;
+
+/* ----------------------------------
+   Node Config
+----------------------------------- */
+export interface NodeConfig {
+  inputFrom?: NodeId; // previous node ID
+  [key: string]: any;
 }
-export interface ExecutionResult {
+
+/* ----------------------------------
+   Node Execution Result
+----------------------------------- */
+export interface NodeExecutionResult {
   success: boolean;
-  logs: string[];
   output?: any;
   error?: string;
+}
+
+/* ----------------------------------
+   Node Definition
+----------------------------------- */
+export interface WorkflowNode {
+  id: string;
+  type: string;
+  config: {
+    inputFrom?: string;
+    [key: string]: any;
+  };
+}
+
+
+/* ----------------------------------
+   Connector Interfaces
+----------------------------------- */
+export interface ConnectorContext {
+  input: any;
+  state: Record<string, any>;
+  logs: WorkflowLog[];
+  services?: Record<string, any>; // [NEW] Access to services
+}
+
+export interface ConnectorResult {
+  success: boolean;
+  output?: any;
+  error?: string;
+}
+
+export interface Connector {
+  id: string;
+  name: string;
+  run(ctx: ConnectorContext, config: any): Promise<ConnectorResult>;
+}
+
+/* ----------------------------------
+   Workflow Definition
+----------------------------------- */
+export interface Workflow {
+  id: string;
+  nodes: WorkflowNode[];
+}
+
+/* ----------------------------------
+   Execution Result
+----------------------------------- */
+export interface ExecutionResult {
+  success: boolean;
+  context: WorkflowContext;
 }
