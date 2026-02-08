@@ -31,8 +31,8 @@ export default function LoginPage() {
       console.log('Login response data:', data);
 
       if (response.ok) {
-      localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem(LOCAL_STORAGE_KEYS.USER, data.user?.id);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN, data.token);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USER, data.user?.id);
         router.push(ROUTES.DASHBOARD);
       } else {
         setError(data.error || ERROR_MESSAGES.INVALID_CREDENTIALS);
@@ -46,17 +46,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#0B0E14] font-sans text-white">
+      <div className="max-w-md w-full space-y-8 bg-[#151C2F] p-8 rounded-2xl border border-gray-800 shadow-xl">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-white tracking-tight">
             Sign in to your account
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300">
                 Email
               </label>
               <input
@@ -66,12 +66,12 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-4 py-3 bg-[#0B0E14] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#3D5CFF] focus:border-transparent transition-all"
                 placeholder="Enter your email"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                 Password
               </label>
               <input
@@ -81,28 +81,28 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-4 py-3 bg-[#0B0E14] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#3D5CFF] focus:border-transparent transition-all"
                 placeholder="Enter your password"
               />
             </div>
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div className="text-red-400 text-sm text-center bg-red-400/10 py-2 rounded-lg border border-red-400/20">{error}</div>
           )}
 
           <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#3D5CFF] hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3D5CFF] disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(61,92,255,0.3)] hover:shadow-[0_0_25px_rgba(61,92,255,0.5)]"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
 
           <div className="text-center">
-            <Link href={ROUTES.SIGNUP} className="text-blue-600 hover:text-blue-500">
+            <Link href={ROUTES.SIGNUP} className="text-[#3D5CFF] hover:text-blue-400 transition-colors text-sm font-medium">
               Don't have an account? Sign up
             </Link>
           </div>

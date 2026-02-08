@@ -71,19 +71,19 @@ export function NodeSidebar({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-80 border-l border-gray-200 bg-white dark:bg-neutral-900 p-4 overflow-y-auto">
+    <aside className="w-80 border-l border-gray-800 bg-[#151C2F] p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Add Node</h3>
+        <h3 className="font-semibold text-white">Add Node</h3>
         <button
           onClick={onClose}
-          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          className="text-sm text-gray-400 hover:text-gray-200"
         >
           Close
         </button>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading connectors...</p>}
-      {error && <p className="text-sm text-red-500">⚠️ {error}</p>}
+      {loading && <p className="text-sm text-gray-400">Loading connectors...</p>}
+      {error && <p className="text-sm text-red-400">⚠️ {error}</p>}
 
       {!loading && !error && (
         <div className="space-y-3">
@@ -95,10 +95,10 @@ export function NodeSidebar({
               .map((m) => (
                 <button
                   key={m.id}
-                  className="w-full text-left px-3 py-2 rounded border hover:bg-gray-50 dark:hover:bg-neutral-800 mb-2"
+                  className="w-full text-left px-3 py-2 rounded border border-gray-800 hover:bg-[#0B0E14] hover:border-gray-700 transition-colors mb-2"
                   onClick={() => onAddNode(m.id, m)}
                 >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">{m.title}</div>
+                  <div className="font-medium text-gray-200">{m.title}</div>
                   <div className="text-xs text-gray-500">{m.id}</div>
                 </button>
               ))}
@@ -112,10 +112,10 @@ export function NodeSidebar({
               .map((m) => (
                 <button
                   key={m.id}
-                  className="w-full text-left px-3 py-2 rounded border hover:bg-gray-50 dark:hover:bg-neutral-800 mb-2"
+                  className="w-full text-left px-3 py-2 rounded border border-gray-800 hover:bg-[#0B0E14] hover:border-gray-700 transition-colors mb-2"
                   onClick={() => onAddNode(m.id, m)}
                 >
-                  <div className="font-medium text-gray-900 dark:text-gray-100">{m.title}</div>
+                  <div className="font-medium text-gray-200">{m.title}</div>
                   <div className="text-xs text-gray-500">{m.id}</div>
                 </button>
               ))}
@@ -124,4 +124,5 @@ export function NodeSidebar({
       )}
     </aside>
   );
+  
 }
