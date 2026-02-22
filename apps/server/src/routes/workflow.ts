@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { prisma } from "../prisma";
 import { executeWorkflowFromJson } from "@triggerforge/core";
 import type { Workflow as CoreWorkflow } from "@triggerforge/core";
-import { aiService, mcpManager, oauthService } from "../services";
+import { aiService, mcpManager, oauthService, executionService } from "../services";
 
 /** Route types */
 type SaveBody = {
@@ -257,41 +257,13 @@ export async function workflowRoutes(app: FastifyInstance) {
           .send({ ok: false, error: "Workflow not found for this user" });
       }
 
-      const workflowJson = workflowRecord.json as {
-        nodes: any[];
-        edges?: any[];
-      };
-
       const input = req.body ?? {};
-
-      const result = await executeWorkflowFromJson(
-        {
-          id: workflowRecord.id,
-          nodes: workflowJson.nodes,
-          edges: workflowJson.edges,
-        },
-        input,
-        {
-          ai: aiService,
-          mcp: mcpManager,
-          oauth: oauthService,
-        }
-      );
-
-      const execution = await prisma.execution.create({
-        data: {
-          workflowId: workflowRecord.id,
-          status: result.success ? "SUCCEEDED" : "FAILED",
-          input,
-          output: result.context.nodeResults,
-          // logs: result.context.logs, // Removed because 'logs' is not a valid field
-        },
-      });
+      const result = await executionService.runWorkflow(workflowRecord.id, input, "manual");
 
       return reply.send({
         ok: true,
-        executionId: execution.id,
-        result,
+        executionId: result.executionId,
+        result: result.result,
       });
     } catch (error) {
       app.log.error(error, "Error running workflow");
@@ -299,6 +271,16 @@ export async function workflowRoutes(app: FastifyInstance) {
         .code(500)
         .send({ ok: false, error: "Failed to run workflow" });
     }
+  });
+
+  /**
+   * 📜 Get Execution History
+   * GET /workflow/:id/executions
+   */
+  app.get<{ Params: IdParams }>("/:id/executions", async (req, reply) => {
+    const { id } = req.params;
+    const executions = await executionService.getExecutions(id, 50);
+    return reply.send({ ok: true, executions });
   });
 
 }

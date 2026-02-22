@@ -9,15 +9,18 @@ interface WorkflowToolbarProps {
   onAddNode: () => void;
   onNameChange: (name: string) => void;
   onRun?: () => void;
+  onImport?: () => void;
+  onExport?: () => void;
 }
 
-export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = ({
-  workflowName,
-  onSave,
-  onAddNode,
-  onNameChange,
-  onRun
-}) => {
+export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = (props) => {
+  const {
+    workflowName,
+    onSave,
+    onAddNode,
+    onNameChange,
+    onRun
+  } = props;
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(workflowName);
   const [isSaving, setIsSaving] = useState(false);
@@ -110,15 +113,32 @@ export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = ({
             <span className="text-sm">{'Home'}</span>
           </button>
 
-          {onRun && (
-            <button
-              onClick={onRun}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
-            >
-              <Play className="w-4 h-4" />
-              <span className="text-sm">Run</span>
-            </button>
-          )}
+          <button
+            onClick={onRun}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
+          >
+            <Play className="w-4 h-4" />
+            <span className="text-sm">Run</span>
+          </button>
+
+
+          <div className="w-px h-6 bg-gray-800" />
+
+          <button
+            onClick={props.onExport}
+            className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg transition-all duration-200 transform hover:scale-105"
+            title="Export JSON"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={props.onImport}
+            className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg transition-all duration-200 transform hover:scale-105"
+            title="Import JSON"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
 
           <button className="p-2 text-gray-400 hover:bg-gray-800 rounded-lg transition-all duration-200 transform hover:scale-105">
             <Settings className="w-4 h-4" />

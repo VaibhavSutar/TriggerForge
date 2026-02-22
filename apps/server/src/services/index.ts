@@ -1,10 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { MCPManager } from "./mcp.service";
 import { AIService } from "./ai.service";
 import { OAuthService } from "./oauth.service";
 export { triggerService } from "./trigger.service";
-import dotenv from "dotenv";
-
-dotenv.config();
+export { executionService } from "./execution.service";
 
 export const mcpManager = new MCPManager([
     // Example local MCP server (filesystem) - configured generally via env or DB later
@@ -12,7 +13,7 @@ export const mcpManager = new MCPManager([
 ]);
 
 export const aiService = new AIService({
-    openaiApiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY,
 });
 
 export const oauthService = new OAuthService({
@@ -23,3 +24,6 @@ export const oauthService = new OAuthService({
 
 // Start MCP connections
 mcpManager.connectAll().catch(err => console.error("MCP Connect Error:", err));
+
+import { GovernanceService } from "./governance.service";
+export const governanceService = new GovernanceService();

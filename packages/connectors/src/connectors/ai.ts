@@ -7,7 +7,7 @@ export const aiConnector: Connector = {
     type: "action",
 
     async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
-        const { prompt, model, system } = config;
+        const { prompt, model, system, baseURL, apiKey } = config;
         if (!prompt) throw new Error("Missing prompt");
 
         if (!ctx.services?.ai) {
@@ -17,7 +17,7 @@ export const aiConnector: Connector = {
         ctx.logs.push(`[ai] generating text with model ${model || "default"}...`);
 
         try {
-            const result = await ctx.services.ai.generateText(prompt, model, system);
+            const result = await ctx.services.ai.generateText(prompt, model, system, { baseURL, apiKey });
             ctx.logs.push(`[ai] generated ${result.length} chars`);
             return { success: true, output: result };
         } catch (err: any) {

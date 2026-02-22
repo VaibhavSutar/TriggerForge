@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpassword
+      POSTGRES_DB: triggerforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    command: ["node", "apps/server/dist/index.js"]
+    restart: always
+    environment:
+      DATABASE_URL: postgres://dbuser:dbpassword@postgres:5432/triggerforge
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+      NODE_ENV: production
+      # Add other env vars here (AI keys, etc)
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    command: ["node", "apps/web/.next/standalone/server.js"]
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      PORT: 3000
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

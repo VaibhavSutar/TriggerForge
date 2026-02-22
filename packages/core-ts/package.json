@@ -11,7 +11,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -w -p tsconfig.build.json",
@@ -19,12 +21,14 @@
   },
   "dependencies": {
     "@triggerforge/connectors": "workspace:*",
-    "mustache": "^4.2.0",
-    "axios": "^1.12.2" 
+    "axios": "^1.12.2",
+    "jest": "^30.2.0",
+    "mustache": "^4.2.0"
   },
   "devDependencies": {
-    "@types/node": "^24.9.1",
+    "@types/jest": "^30.0.0",
     "@types/mustache": "^4.2.6",
+    "@types/node": "^24.9.1",
     "rimraf": "^5.0.10",
     "typescript": "^5.9.3"
   }

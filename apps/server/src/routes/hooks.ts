@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { prisma } from "../index";
 import { executeWorkflowFromJson } from "@triggerforge/core";
-import { aiService, mcpManager, oauthService } from "../services";
+import { aiService, mcpManager, oauthService, executionService } from "../services";
 
 export async function hookRoutes(fastify: FastifyInstance) {
 
@@ -33,11 +33,13 @@ export async function hookRoutes(fastify: FastifyInstance) {
 
         // Run asynchronously (fire and forget from HTTP perspective, or await if result needed)
         // Common pattern: return 200 OK immediately.
-        executeWorkflowFromJson(workflow.json as any, input, {
-            ai: aiService,
-            mcp: mcpManager,
-            oauth: oauthService
-        }).catch(err => console.error("Webhook Execution Error:", err));
+        // Use ExecutionService for logging and persistence
+        executionService.runWorkflow(workflowId, input, "webhook")
+            .then(result => {
+                if (result.skipped) console.log(`[Webhook] Skipped: ${result.reason}`);
+                else console.log(`[Webhook] Execution ${result.executionId} completed: ${result.success}`);
+            })
+            .catch(err => console.error("Webhook Execution Error:", err));
 
         return reply.send({ success: true, message: "Workflow triggered" });
     });

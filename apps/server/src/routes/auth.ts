@@ -68,9 +68,25 @@ export async function authRoutes(app: FastifyInstance) {
 
       // Store in DB
       if (state && tokens.access_token) {
-        const userExists = await prisma.user.findUnique({ where: { id: state } });
+        let userExists = await prisma.user.findUnique({ where: { id: state } });
         if (!userExists) {
-          return res.status(404).send(`User not found (invalid userId: ${state}). Please log in again.`);
+          // Auto-create user if missing (e.g. test-user-id scenario)
+          console.log(`[OAuth] User ${state} not found, creating placeholder user.`);
+          try {
+            userExists = await prisma.user.create({
+              data: {
+                id: state, // Force ID to match state
+                email: state.includes("@") ? state : `user_${state}@example.com`,
+                passwordHash: "oauth_placeholder",
+                name: "OAuth User"
+              }
+            });
+          } catch (e) {
+            console.error("Failed to create placeholder user", e);
+            // Fallback: Try to find by email if ID failed? 
+            // Actually if we force ID, it should work unless duplicate email.
+            return res.status(500).send("Failed to create user session for OAuth.");
+          }
         }
 
         await prisma.credential.upsert({

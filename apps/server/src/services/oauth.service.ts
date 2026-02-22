@@ -73,4 +73,14 @@ export class OAuthService {
 
         return res.data.files || [];
     }
+
+    async getSheetsClient(accessToken: string, refreshToken?: string) {
+        const auth = await this.getGoogleClient(accessToken, refreshToken);
+        return google.sheets({ version: 'v4', auth });
+    }
+
+    async getDocsClient(accessToken: string, refreshToken?: string) {
+        const auth = await this.getGoogleClient(accessToken, refreshToken);
+        return google.docs({ version: 'v1', auth });
+    }
 }

@@ -17,6 +17,7 @@ export interface WorkflowContext {
     timestamp: number;
   }[];
   services?: Record<string, any>; // [NEW] Dependency injection
+  nodeLabels?: Record<string, string>; // [NEW] Map ID -> Label
 }
 
 /* ----------------------------------
@@ -54,6 +55,10 @@ export interface WorkflowNode {
   type: string;
   config: {
     inputFrom?: string;
+    [key: string]: any;
+  };
+  data?: {
+    label?: string;
     [key: string]: any;
   };
 }

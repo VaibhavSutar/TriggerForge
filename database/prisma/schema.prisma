@@ -43,6 +43,8 @@ model Workflow {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   executions  Execution[]  // backref
+  aiLogs      AILog[]
+  safetyReports SafetyReport[]
 
   @@index([userId])
   @@unique([userId, name]) // 👈 optional: prevent duplicate names per user
@@ -81,4 +83,36 @@ model Credential {
   updatedAt    DateTime @updatedAt
 
   @@unique([userId, provider])
+}
+
+model AILog {
+  id              String   @id @default(uuid())
+  workflowId      String?
+  workflow        Workflow? @relation(fields: [workflowId], references: [id])
+  nodeId          String?
+  provider        String   // e.g. "gemini", "openai"
+  model           String
+  inputPrompt     String
+  systemPrompt    String?
+  outputResponse  String
+  tokensUsed      Int?
+  latencyMs       Int?
+  safetyScore     Float?   // 0.0 to 1.0
+  flagged         Boolean  @default(false)
+  createdAt       String   // storing as ISO string for simplicity or DateTime @default(now()) if preferred
+  timestamp       DateTime @default(now())
+
+  @@index([workflowId])
+}
+
+model SafetyReport {
+  id          String   @id @default(uuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id])
+  totalRuns   Int
+  flaggedRuns Int
+  avgScore    Float
+  generatedAt DateTime @default(now())
+
+  @@index([workflowId])
 }

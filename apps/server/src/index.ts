@@ -9,6 +9,9 @@ import { dbCheckRoute } from "./routes/db-check";
 import { workflowRoutes } from "./routes/workflow";
 import { connectorsRoutes } from "./routes/connectors";
 import { hookRoutes } from "./routes/hooks";
+import { executionRoutes } from "./routes/execution";
+import { aiRoutes } from "./routes/ai";
+import { evalRoutes } from "./routes/eval";
 import { triggerService } from "./services";
 
 dotenv.config();
@@ -25,6 +28,9 @@ app.register(dbCheckRoute);
 app.register(workflowRoutes, { prefix: "/workflow" });
 app.register(connectorsRoutes, { prefix: "/connectors" });
 app.register(hookRoutes, { prefix: "/hooks" });
+app.register(executionRoutes, { prefix: "/execution" });
+app.register(aiRoutes, { prefix: "/ai" });
+app.register(evalRoutes, { prefix: "/eval" });
 
 
 const start = async () => {
@@ -41,4 +47,6 @@ const start = async () => {
   }
 };
 
-start();
+if (require.main === module) {
+  start();
+}

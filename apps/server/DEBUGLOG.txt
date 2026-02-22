@@ -1,0 +1,11 @@
+
+# Debug Instructions
+
+To fix the Google Access Token error:
+1. Make sure you have **re-connected** your Google account in the workflow node settings (click the disconnected/red icon if any, or re-auth).
+2. Trigger the webhook again.
+3. Check the server console logs for:
+   - `[ExecutionService] Found Google credentials for user ...` -> Token found.
+   - `[ExecutionService] NO Google credentials found ...` -> Token missing.
+
+If token is missing, the workflow is likely running under a user ID that doesn't match the credentials.

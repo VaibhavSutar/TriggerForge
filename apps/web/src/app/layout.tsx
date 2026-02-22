@@ -1,6 +1,7 @@
 import React from 'react';
 import './global.css'
 import { AuthProvider } from './context/AuthContext';
+import { Tour } from '@/components/Tour';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,9 +9,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <body>
         <AuthProvider>
 
-        <main>
-          {children}
-        </main>
+          <main>
+            {children}
+            <Tour />
+          </main>
         </AuthProvider>
       </body>
     </html>

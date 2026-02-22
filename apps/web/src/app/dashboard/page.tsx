@@ -181,6 +181,9 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-300">Welcome, {user?.name ?? "User"}</span>
+              <Link href="/dashboard/eval" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+                AI Evaluations
+              </Link>
               <button onClick={handleLogout} className="bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-md hover:bg-red-500/20 transition-colors">
                 Logout
               </button>

@@ -6,7 +6,7 @@ export default function Page() {
       {/* Navbar Placeholder to match dashboard feel */}
       <nav className="border-b border-gray-800 bg-[#0B0E14]/50 backdrop-blur fixed w-full z-10 top-0">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="text-xl font-bold tracking-tight">NeuraFlow</div>
+          <div className="text-xl font-bold tracking-tight">TriggerForge</div>
           <div className="space-x-6 text-sm">
             <Link href="/login" className="text-gray-400 hover:text-white transition-colors">Sign In</Link>
             <Link href="/signup" className="bg-[#3D5CFF] hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">Get Started</Link>

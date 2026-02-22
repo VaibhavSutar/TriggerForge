@@ -1,138 +1,95 @@
-import { printConnector } from "./connectors/print.js";
+
+import { Connector } from "./types.js";
+
+// Triggers
+import { startConnector } from "./connectors/startConnector.js";
+import { webhookConnector } from "./connectors/webhook.js";
+import { cronConnector } from "./connectors/cron.js";
+
+// Actions
 import { httpConnector } from "./connectors/http.js";
 import { delayConnector } from "./connectors/delay.js";
-import { conditionConnector } from "./connectors/condition.js";
-import { emailConnector } from "./connectors/email.js";
-import { slackConnector } from "./connectors/slack.js";
-import { mathConnector } from "./connectors/math.js";
-import { webhookConnector } from "./connectors/webhook.js";
+import { printConnector } from "./connectors/print.js";
 import { randomConnector } from "./connectors/random.js";
-import { fileConnector } from "./connectors/file.js";
+import { mathConnector } from "./connectors/math.js";
+import { conditionConnector } from "./connectors/condition.js";
+
+// Integrations
+import { googleGmailConnector } from "./connectors/google.js";
+import { googleDocsConnector } from "./connectors/googleDocs.js";
+import { googleSheetsConnector } from "./connectors/googleSheets.js";
 import { discordWebhookConnector } from "./connectors/discord_webhook.js";
-import type { Connector } from "./types.js";
-import { startConnector } from "./connectors/startConnector.js";
+import { slackConnector } from "./connectors/slack.js";
+import { twitterConnector } from "./connectors/twitter.js";
+import { telegramConnector } from "./connectors/telegram.js";
+import { teamsConnector } from "./connectors/teams.js";
+import { emailConnector } from "./connectors/email.js";
+import { huggingFaceConnector } from "./connectors/huggingFace.js";
+import { fileConnector } from "./connectors/file.js";
+
+// AI
 import { aiConnector } from "./connectors/ai.js";
 import { mcpToolConnector } from "./connectors/mcpTool.js";
-import { googleGmailConnector } from "./connectors/google.js";
-import { googleSheetsConnector } from "./connectors/googleSheets.js";
-import { googleDocsConnector } from "./connectors/googleDocs.js";
 
-/** Base registry: keys are our canonical ids (lowercase, no spaces, no hyphens/underscores). */
-export const connectors: Record<string, Connector> = {
-  print: printConnector,
-  http: httpConnector,
-  delay: delayConnector,
-  condition: conditionConnector,
-  email: emailConnector,
-  slack: slackConnector,
-  math: mathConnector,
-  webhook: webhookConnector,
-  random: randomConnector,
-  file: fileConnector,
-  // Important: choose ONE canonical key; id inside the connector can be "discord_webhook" etc.,
-  // but our registry key should be normalized (no hyphen/underscore) for simpler lookups.
-  discordwebhook: discordWebhookConnector,
-  start: startConnector,
-  ai: aiConnector,
-  mcp_tool: mcpToolConnector,
-  google_gmail: googleGmailConnector,
-  google_sheets: googleSheetsConnector,
-  google_docs: googleDocsConnector,
-};
+// [NEW] RAG & Agent
+import { textSplitterConnector } from "./connectors/textSplitter.js";
+import { googleDriveConnector } from "./connectors/googleDrive.js";
+import { geminiConnector } from "./connectors/gemini.js";
+import { pineconeConnector } from "./connectors/pinecone.js";
+import { vectorStoreToolConnector } from "./connectors/vectorStoreTool.js";
+import { memoryConnector } from "./connectors/memory.js";
+import { agentConnector } from "./connectors/agent.js";
+import { complianceNode } from "./connectors/compliance.js";
 
-/** Normalize any incoming id/name into a canonical lookup key. */
-function normalizeKey(s: string): string {
-  return String(s || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, ""); // remove spaces/underscores/hyphens
-}
+// Re-export individually
+export { startConnector, webhookConnector, cronConnector };
+export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector };
+export { googleGmailConnector, googleDocsConnector, googleSheetsConnector, discordWebhookConnector, slackConnector, twitterConnector, telegramConnector, teamsConnector, emailConnector, huggingFaceConnector, fileConnector };
+export { aiConnector, mcpToolConnector };
+export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector };
 
-/** Optional aliases for common variations. Map normalized variations -> canonical key. */
-const ALIASES: Record<string, string> = {
-  // discord webhook
-  [normalizeKey("discord_webhook")]: "discordwebhook",
-  [normalizeKey("discord-webhook")]: "discordwebhook",
-  [normalizeKey("discord webhook")]: "discordwebhook",
-  [normalizeKey("discord")]: "discordwebhook",
-  [normalizeKey("startConnector")]: "startConnector",
-
-  // http variations
-  [normalizeKey("HTTP")]: "http",
-  [normalizeKey("http-request")]: "http",
-
-  // print variations
-  [normalizeKey("log")]: "print",
-  [normalizeKey("console")]: "print",
-};
-
-/** Reverse index to support lookup by both key and connector.id/title variants. */
-let INDEX = new Map<string, Connector>();
-
-function rebuildIndex() {
-  INDEX = new Map<string, Connector>();
-
-  // 1) from registry keys
-  for (const [key, conn] of Object.entries(connectors)) {
-    INDEX.set(normalizeKey(key), conn);
-  }
-
-  // 2) from connector.id (if provided)
-  for (const conn of Object.values(connectors)) {
-    if (conn?.id) {
-      INDEX.set(normalizeKey(conn.id), conn);
-    }
-    // 3) from connector.title/name if present (defensive)
-    // @ts-ignore – some connectors may expose title/name
-    if ((conn as any)?.title) INDEX.set(normalizeKey((conn as any).title), conn);
-    // @ts-ignore
-    if ((conn as any)?.name) INDEX.set(normalizeKey((conn as any).name), conn);
-  }
-
-  // 4) aliases
-  for (const [alias, canonical] of Object.entries(ALIASES)) {
-    const target = connectors[canonical];
-    if (target) INDEX.set(alias, target);
-  }
-}
-
-/** Call once on module load. */
-rebuildIndex();
-
-/** Public API */
-
-export function registerConnector(connector: Connector) {
-  const key = normalizeKey(connector.id || connector?.name || "");
-  if (!key) throw new Error("registerConnector: connector.id (or name) is required");
-
-  connectors[key] = connector;
-  rebuildIndex();
-}
-
-export default function hasConnector(type: string): boolean {
-  const n = normalizeKey(type);
-  if (INDEX.has(n)) return true;
-  const alias = ALIASES[n];
-  return alias ? !!connectors[alias] : false;
-}
-
-export function getConnector(type: string): Connector | undefined {
-  const n = normalizeKey(type);
-
-  // exact / normalized index hit
-  const byIndex = INDEX.get(n);
-  if (byIndex) return byIndex;
-
-  // alias → canonical → value
-  const alias = ALIASES[n];
-  if (alias) return connectors[alias];
-
-  // as a last resort, try raw registry access by normalized key
-  return connectors[n];
-}
+// Registry
+const ALL_CONNECTORS: Connector[] = [
+  startConnector,
+  webhookConnector,
+  cronConnector,
+  httpConnector,
+  delayConnector,
+  printConnector,
+  randomConnector,
+  mathConnector,
+  conditionConnector,
+  googleGmailConnector,
+  googleDocsConnector,
+  googleSheetsConnector,
+  discordWebhookConnector,
+  slackConnector,
+  twitterConnector,
+  telegramConnector,
+  teamsConnector,
+  emailConnector,
+  huggingFaceConnector,
+  fileConnector,
+  aiConnector,
+  mcpToolConnector,
+  // [NEW]
+  textSplitterConnector,
+  googleDriveConnector,
+  geminiConnector,
+  pineconeConnector,
+  vectorStoreToolConnector,
+  memoryConnector,
+  agentConnector,
+  complianceNode
+];
 
 export function listConnectors(): Connector[] {
-  return Object.values(connectors);
+  return ALL_CONNECTORS;
 }
 
+export function getConnector(id: string): Connector | undefined {
+  return ALL_CONNECTORS.find(c => c.id === id);
+}
+
+// Also export types if needed
 export * from "./types.js";

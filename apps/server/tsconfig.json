@@ -14,6 +14,8 @@
   "extends": "../../tsconfig.json",
   "include": [
     "src",
-    "scripts"
+    "scripts",
+    "debug_db.ts",
+    "fix_db.ts"
   ]
 }

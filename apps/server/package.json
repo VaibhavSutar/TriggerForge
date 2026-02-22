@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
+    "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@prisma/client": "^6.18.0",
     "@triggerforge/core": "workspace:*",
