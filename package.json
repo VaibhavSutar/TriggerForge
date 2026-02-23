@@ -8,6 +8,13 @@
     "database",
     "infra"
   ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma"
+    ]
+  },
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",

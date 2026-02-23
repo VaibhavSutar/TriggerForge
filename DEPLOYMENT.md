@@ -30,7 +30,7 @@ Render allows you to deploy Node.js Web Services for free.
     * **Branch**: `main`
     * **Root Directory**: `apps/server` (Important!)
     * **Runtime**: `Node`
-    * **Build Command**: `pnpm install && pnpm run build`
+    * **Build Command**: `pnpm install && pnpm run generate && pnpm run build`
     * **Start Command**: `pnpm run start`
 5. **Environment Variables** (Add these under Advanced):
     * `PORT`: `4000`
@@ -58,8 +58,11 @@ Vercel is the best place to host Next.js frontends and is completely free for ho
 4. **Configuration Settings**:
     * **Framework Preset**: `Next.js`
     * **Root Directory**: `apps/web` (Important! Click 'Edit' next to Root Directory and select `apps/web`).
+    * **Install Command** (Override): `cd ../.. && pnpm install`
+    * **Build Command** (Override): `cd ../.. && npx turbo run build --filter=@triggerforge/web`
 5. **Environment Variables**:
-    * `NEXT_PUBLIC_API_BASE`: *(Paste your Render backend URL here, e.g., `https://triggerforge-api.onrender.com`)*
+    * `NEXT_PUBLIC_API_URL`: *(Paste your Render backend URL here, e.g., `https://triggerforge-api.onrender.com`)*
+    * `NEXT_PUBLIC_API_BASE`: *(Same as above, keep both just in case)*
 6. Click **Deploy**.
 
 ---
