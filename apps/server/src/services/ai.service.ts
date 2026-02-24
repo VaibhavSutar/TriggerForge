@@ -12,13 +12,20 @@ export class AIService {
 
     async generateText(
         prompt: string,
-        model: string = "gemini-2.0-flash"
+        model: string = "gemini-2.0-flash",
+        system?: string,
+        options?: { baseURL?: string, apiKey?: string }
     ): Promise<string> {
-        if (!this.genAI) throw new Error("AI Service not configured: Missing API Key");
+        let client = this.genAI;
+        if (options?.apiKey) {
+            client = new GoogleGenerativeAI(options.apiKey);
+        }
+
+        if (!client) throw new Error("AI Service not configured: Missing API Key. Please provide one in the node config.");
 
         try {
             const startTime = Date.now();
-            const m = this.genAI.getGenerativeModel({ model });
+            const m = client.getGenerativeModel({ model });
             const result = await m.generateContent(prompt);
             const response = result.response;
             const text = response.text();

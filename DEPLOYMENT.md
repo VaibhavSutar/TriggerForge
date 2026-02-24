@@ -28,10 +28,10 @@ Render allows you to deploy Node.js Web Services for free.
     * **Name**: `triggerforge-api` (or similar)
     * **Region**: Choose one close to you or your Neon database.
     * **Branch**: `main`
-    * **Root Directory**: `apps/server` (Important!)
+    * **Root Directory**: `.` (Leave blank or set to `.` to use the repo root)
     * **Runtime**: `Node`
-    * **Build Command**: `pnpm install && pnpm run generate && pnpm run build`
-    * **Start Command**: `pnpm run start`
+    * **Build Command**: `pnpm install && cd apps/server && pnpm run generate && cd ../.. && npx turbo run build --filter=@triggerforge/server`
+    * **Start Command**: `cd apps/server && pnpm run start`
 5. **Environment Variables** (Add these under Advanced):
     * `PORT`: `4000`
     * `DATABASE_URL`: *(Paste your Neon Connection String here)*

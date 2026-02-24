@@ -13,6 +13,9 @@ export const DataInspector: React.FC<DataInspectorProps> = ({ inputData, outputD
 
     if (!isVisible) return null;
 
+    const rawData = activeTab === 'input' ? inputData : outputData;
+    const safeData = typeof rawData === 'object' && rawData !== null ? rawData : { value: rawData };
+
     return (
         <div className="flex flex-col h-64 border-t border-gray-800 bg-[#0B0E14] text-white">
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-[#151C2F]">
@@ -36,7 +39,7 @@ export const DataInspector: React.FC<DataInspectorProps> = ({ inputData, outputD
             </div>
             <div className="flex-1 overflow-auto p-4">
                 <ReactJson
-                    src={activeTab === 'input' ? inputData : outputData}
+                    src={safeData}
                     theme="ocean"
                     collapsed={1}
                     displayDataTypes={false}

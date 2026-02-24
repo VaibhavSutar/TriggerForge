@@ -27,7 +27,7 @@ export const huggingFaceConnector: Connector = {
 
         try {
             const params = parameters ? JSON.parse(parameters) : {};
-            const maxTokens = params.max_new_tokens || params.max_tokens || 500;
+            const maxTokens = params.max_new_tokens || params.max_tokens || 2048;
             const temperature = params.temperature || 0.7;
 
             // Prepare Chat Body
@@ -52,7 +52,19 @@ export const huggingFaceConnector: Connector = {
 
             if (response.ok) {
                 const result = await response.json();
-                const outputText = result.choices?.[0]?.message?.content || "";
+                let outputText = result.choices?.[0]?.message?.content || "";
+
+                // Strip <think>...</think> blocks from models like DeepSeek R1
+                let stripped = outputText.replace(/<think>[\s\S]*?(?:<\/think>|$)\n*/g, "").trim();
+
+                // Fallback: If stripping <think> tags removed EVERYTHING (because the model only output thoughts),
+                // we'll just return the thoughts themselves with the tags stripped so it doesn't break upstream things.
+                if (!stripped) {
+                    stripped = outputText.replace(/<\/?think>/g, "").trim();
+                }
+
+                outputText = stripped;
+
                 return {
                     success: true,
                     output: {
@@ -97,6 +109,17 @@ export const huggingFaceConnector: Connector = {
                 } else {
                     outputText = String(result);
                 }
+
+                // Strip <think>...</think> blocks from models like DeepSeek R1
+                let stripped = outputText.replace(/<think>[\s\S]*?(?:<\/think>|$)\n*/g, "").trim();
+
+                // Fallback: If stripping <think> tags removed EVERYTHING (because the model only output thoughts),
+                // we'll just return the thoughts themselves with the tags stripped so it doesn't break upstream things.
+                if (!stripped) {
+                    stripped = outputText.replace(/<\/?think>/g, "").trim();
+                }
+
+                outputText = stripped;
 
                 return {
                     success: true,

@@ -30,7 +30,13 @@ export function NodeSidebar({
     setIsGenerating(true);
     console.log("[NodeSidebar] Starting AI generation with prompt:", prompt);
     try {
-      const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+      let userId = "test-user-id";
+      try {
+        const userStr = localStorage.getItem("user");
+        if (userStr) userId = JSON.parse(userStr).id || "test-user-id";
+      } catch {
+        userId = localStorage.getItem("user") || "test-user-id";
+      }
       console.log("[NodeSidebar] Sending request API...");
       const res = await fetch("/api/ai/generate-workflow", {
         method: "POST",
@@ -117,7 +123,7 @@ export function NodeSidebar({
       { id: "print", title: "Print", kind: "action", defaultConfig: { message: "Hello World!" } },
       { id: "delay", title: "Delay", kind: "action", defaultConfig: { ms: 1000 } },
       { id: "http", title: "HTTP Request", kind: "action", defaultConfig: { url: "https://api.example.com", method: "GET" } },
-      { id: "ai", title: "AI Text Gen", kind: "action", defaultConfig: { prompt: "Explain quantum physics", model: "gpt-4o" } },
+      { id: "ai", title: "AI Text Gen", kind: "action", defaultConfig: { prompt: "Explain quantum physics", model: "gemini-2.0-flash", apiKey: "" } },
       { id: "mcp_tool", title: "MCP Tool Call", kind: "action", defaultConfig: { serverName: "filesystem", toolName: "list_files", args: {} } },
       { id: "google_gmail", title: "Gmail: Send", kind: "action", defaultConfig: { to: "user@example.com", subject: "Hello", body: "Message" } },
 

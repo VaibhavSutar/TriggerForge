@@ -59,6 +59,9 @@ export const googleDocsConnector: Connector = {
 
             case "append_text":
                 if (!documentId) throw new Error("Document ID is required for append_text");
+                if (!content || typeof content !== "string" || content.trim() === "") {
+                    throw new Error("Content to append is empty. This can happen if the AI model output was completely stripped (e.g. only contains <think> tags) or the input expression failed.");
+                }
                 const cleanId = documentId.trim();
                 ctx.logs.push(`[google_docs] Appending to doc ${cleanId}`);
 

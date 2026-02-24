@@ -19,7 +19,7 @@ export const aiConnector: Connector = {
         try {
             const result = await ctx.services.ai.generateText(prompt, model, system, { baseURL, apiKey });
             ctx.logs.push(`[ai] generated ${result.length} chars`);
-            return { success: true, output: result };
+            return { success: true, output: { output: { text: result } } };
         } catch (err: any) {
             ctx.logs.push(`[ai] error: ${err.message}`);
             return { success: false, error: err.message, output: null };

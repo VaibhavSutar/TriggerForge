@@ -62,8 +62,7 @@ export async function connectorsRoutes(app: FastifyInstance) {
 
       if (!connector) return reply.code(404).send({ error: `Connector ${type} not found` });
 
-      // 2. Prepare Context with Services and Credentials
-      const { oauthService } = await import("../services");
+      const { oauthService, aiService } = await import("../services");
 
       // Load Credentials (if needed for this node type)
       // Checks if type starts with 'google_' to pre-load google creds
@@ -81,7 +80,7 @@ export async function connectorsRoutes(app: FastifyInstance) {
       }
 
       const ctx: any = {
-        services: { oauth: oauthService },
+        services: { oauth: oauthService, ai: aiService },
         state: {
           user: { id: userId },
           connections

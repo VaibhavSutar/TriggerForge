@@ -1,5 +1,18 @@
 "use client";
 
+export const getUserId = () => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.id || "test-user-id";
+    }
+  } catch {
+    return localStorage.getItem("user") || "test-user-id";
+  }
+  return "test-user-id";
+};
+
 import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
 import {
@@ -217,7 +230,7 @@ const FileSelector = ({
 
   const fetchFiles = async () => {
     setIsLoadingFiles(true);
-    const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+    const userId = getUserId();
     let mimeType = "";
     if (nodeType === "google_sheets") mimeType = "application/vnd.google-apps.spreadsheet";
     else if (nodeType === "google_docs") mimeType = "application/vnd.google-apps.document";
@@ -323,7 +336,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     btn.disabled = true;
 
     try {
-      const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+      const userId = getUserId();
       const res = await fetch("http://localhost:4000/connectors/run-node", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -356,7 +369,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
    * ----------------------------------- */
   const renderConfigInput = (key: string, value: any) => {
     // Hide sensitive passwords
-    if (key.toLowerCase().includes("password")) {
+    if (key.toLowerCase().includes("password") || key.toLowerCase().includes("apikey") || key.toLowerCase().includes("api_key") || key.toLowerCase().includes("token")) {
       return (
         <div key={key} className="mb-2">
           <label className="block text-xs font-medium text-gray-300 mb-1">
@@ -401,7 +414,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
                 const top = window.screen.height / 2 - height / 2;
 
                 // Construct Authentication URL
-                const userId = localStorage.getItem("triggerforge_user_id") || "test-user-id";
+                const userId = getUserId();
                 const authUrl = `http://localhost:4000/auth/google?userId=${userId}`;
 
                 const popup = window.open(
@@ -499,6 +512,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       const op = tempConfig["operation"] || "read_sheet";
       if (["read_sheet", "clear_sheet"].includes(op)) return null;
     }
+    if (data.nodeType === "ai" && ["system", "baseURL"].includes(key)) {
+      return null;
+    }
 
     // 6. Model Selector (Hugging Face or AI)
     if (key === "model" && (data.nodeType === "hugging_face" || data.nodeType === "ai")) {
@@ -512,22 +528,25 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
         models = [
           "meta-llama/Llama-3.2-1B-Instruct",
           "meta-llama/Llama-3.2-3B-Instruct",
-          "meta-llama/Llama-3.1-70B-Instruct",
+          "meta-llama/Llama-3.3-70B-Instruct",
           "HuggingFaceH4/zephyr-7b-beta",
-          "google/flan-t5-base",
           "mistralai/Mistral-7B-Instruct-v0.3",
-          "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+          "mistralai/Mixtral-8x7B-Instruct-v0.1",
+          "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+          "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+          "Qwen/Qwen2.5-72B-Instruct",
+          "google/gemma-2-2b-it",
+          "google/gemma-2-9b-it"
         ];
       } else if (data.nodeType === "ai") {
+        // The backend AIService uses Google Generative AI (Gemini).
         models = [
-          "gpt-4o",
-          "gpt-4-turbo",
-          "gpt-3.5-turbo",
-          "anthropic/claude-3-opus",
-          "anthropic/claude-3-sonnet",
-          "anthropic/claude-3-haiku",
-          "google/gemini-pro",
-          "mistralai/mistral-large",
+          "gemini-2.0-flash",
+          "gemini-2.0-flash-lite-preview-02-05",
+          "gemini-1.5-flash",
+          "gemini-1.5-pro",
+          "gemini-pro",
+          "gemini-2.5-flash"
         ];
       }
 
