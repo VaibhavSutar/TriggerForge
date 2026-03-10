@@ -47,6 +47,4 @@ const start = async () => {
   }
 };
 
-if (require.main === module) {
-  start();
-}
+start();
