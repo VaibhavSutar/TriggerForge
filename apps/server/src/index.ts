@@ -38,12 +38,24 @@ const start = async () => {
     await app.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" });
 
     // Initialize Triggers (Cron)
-    await triggerService.initialize();
+    try {
+      await triggerService.initialize();
+    } catch (triggerError) {
+      console.error("⚠️ Non-fatal error initializing triggers:", triggerError);
+    }
 
     console.log(`🚀 Server running on http://localhost:${process.env.PORT || 4000}`);
   } catch (err) {
-    app.log.error(err);
-    process.exit(1);
+    console.error("❌ FATAL STARTUP ERROR:", err);
+
+    if (app.log.error) {
+      app.log.error(err);
+    }
+
+    // Give time for logs to flush before exiting
+    setTimeout(() => {
+      process.exit(1);
+    }, 1000);
   }
 };
 
