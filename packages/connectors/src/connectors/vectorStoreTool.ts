@@ -9,17 +9,6 @@ export const vectorStoreToolConnector: Connector = {
     async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
         const { name = "search_company_documents", description = "Retrieve information from company documents" } = config;
 
-        // This node doesn't execute the search itself when run in the flow.
-        // It returns a *Tool Definition* that the Agent node can use.
-        // When the Agent *calls* this tool, the Agent (or runtime) must handle the execution ??
-        // Actually, in n8n, the Tool Node is connected to the Agent.
-        // The Agent sees the tool definition.
-        // If the Agent invokes it, it likely triggers a sub-workflow or a specific execution path.
-
-        // For our simplified "Linear Agent" or "Chat with Documents":
-        // This node might just pass configuration to the Agent.
-
-        // Let's return a standardized Tool Definition Object.
         const toolDefinition = {
             name,
             description,
@@ -30,15 +19,15 @@ export const vectorStoreToolConnector: Connector = {
                 },
                 required: ["query"]
             },
-            // Metadata for the engine to know how to execute it?
-            // In a real Agentic framework, we'd bind a function. 
-            // Here we are just passing data.
             __isTool: true,
-            executionConfig: config // execute usage config (pinecone index, etc) logic would be needed if we supported dynamic execution
+            // Provide connectorId for dynamic execution in the Agent
+            connectorId: "pinecone_query_tool", // Let's use a specific wrapper if needed, or simply handle it in Agent / define a custom execution path.
+            // Actually, querying pinecone requires embedding first! 
+            // So we can define a dedicated 'vector_query_tool_executor' connector or let the agent handle logic.
+            // Since we'll let Agent handle it broadly, let's just tag it:
+            toolType: "rag_vector_search",
+            executionConfig: config
         };
-
-        // In the n8n example, the vector store tool is connected to the Agent.
-        // The Agent aggregates tools.
 
         return { success: true, output: toolDefinition };
     }

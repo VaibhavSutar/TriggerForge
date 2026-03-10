@@ -122,6 +122,7 @@ export function NodeSidebar({
       { id: "cron", title: "Schedule (Cron)", kind: "trigger", defaultConfig: { expression: "* * * * *" } },
       { id: "print", title: "Print", kind: "action", defaultConfig: { message: "Hello World!" } },
       { id: "delay", title: "Delay", kind: "action", defaultConfig: { ms: 1000 } },
+      { id: "loop", title: "Loop (Array Iteration)", kind: "action", defaultConfig: { array: "[]" } },
       { id: "http", title: "HTTP Request", kind: "action", defaultConfig: { url: "https://api.example.com", method: "GET" } },
       { id: "ai", title: "AI Text Gen", kind: "action", defaultConfig: { prompt: "Explain quantum physics", model: "gemini-2.0-flash", apiKey: "" } },
       { id: "mcp_tool", title: "MCP Tool Call", kind: "action", defaultConfig: { serverName: "filesystem", toolName: "list_files", args: {} } },

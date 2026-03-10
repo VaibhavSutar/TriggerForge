@@ -17,7 +17,10 @@ export const aiConnector: Connector = {
         ctx.logs.push(`[ai] generating text with model ${model || "default"}...`);
 
         try {
-            const result = await ctx.services.ai.generateText(prompt, model, system, { baseURL, apiKey });
+            // Check if workflowId is bound in the config (passed down by workflow engine mapped from node execution)
+            const workflowId = config.workflowId || ctx.state?.workflowId || "unknown";
+
+            const result = await ctx.services.ai.generateText(prompt, model, system, { baseURL, apiKey, workflowId });
             ctx.logs.push(`[ai] generated ${result.length} chars`);
             return { success: true, output: { output: { text: result } } };
         } catch (err: any) {

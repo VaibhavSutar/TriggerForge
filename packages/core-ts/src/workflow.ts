@@ -187,7 +187,7 @@ export async function executeWorkflowFromJson(
     nodeResults: {},
     logs: [],
     services,
-    state: initialState,
+    state: { ...initialState, workflowId: workflowJson.id }, // Inject workflow ID
     nodeLabels: {},
   };
 
@@ -298,6 +298,24 @@ export async function executeWorkflowFromJson(
           // If edge has NO handle id, maybe it's an old edge.
           // Default to: Run if true.
           if (isTrue) execQueue.push({ nodeId: edge.target, input: result.output });
+        }
+      }
+    } else if (node.type === "loop" || node.data?.nodeType === "loop") {
+      // LOOP LOGIC
+      let items = result.output;
+      if (typeof items === "string") {
+        try { items = JSON.parse(items); } catch { }
+      }
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          for (const edge of outEdges) {
+            execQueue.push({ nodeId: edge.target, input: item });
+          }
+        }
+      } else {
+        console.warn(`[ENGINE] Loop node ${nodeId} output is not an array. Falling back to normal flow.`);
+        for (const edge of outEdges) {
+          execQueue.push({ nodeId: edge.target, input: items });
         }
       }
     } else {

@@ -33,7 +33,26 @@ export const googleDocsConnector: Connector = {
                         title: docTitle
                     }
                 });
-                output = createRes.data;
+                output = { ...(typeof ctx.input === "object" ? ctx.input : { _rawInput: ctx.input }), ...createRes.data };
+
+                if (content && typeof content === "string" && content.trim() !== "") {
+                    ctx.logs.push(`[google_docs] Appending initial content to newly created doc...`);
+                    await docs.documents.batchUpdate({
+                        documentId: createRes.data.documentId,
+                        requestBody: {
+                            requests: [
+                                {
+                                    insertText: {
+                                        text: content,
+                                        endOfSegmentLocation: {
+                                            segmentId: ""
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    });
+                }
                 break;
 
             case "read_text":

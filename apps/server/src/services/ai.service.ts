@@ -14,7 +14,7 @@ export class AIService {
         prompt: string,
         model: string = "gemini-2.0-flash",
         system?: string,
-        options?: { baseURL?: string, apiKey?: string }
+        options?: { baseURL?: string, apiKey?: string, workflowId?: string }
     ): Promise<string> {
         let client = this.genAI;
         if (options?.apiKey) {
@@ -36,7 +36,8 @@ export class AIService {
                 model,
                 inputPrompt: prompt,
                 outputResponse: text,
-                latencyMs: Date.now() - startTime
+                latencyMs: Date.now() - startTime,
+                workflowId: options?.workflowId
             }).catch(err => console.error("[AIService] Logging failed:", err));
 
             return text;
@@ -52,7 +53,8 @@ export class AIService {
         inputPrompt: string,
         outputResponse: string,
         latencyMs: number,
-        tokensUsed?: number
+        tokensUsed?: number,
+        workflowId?: string
     }) {
         // Basic PII masking (simple example)
         const maskedPrompt = data.inputPrompt.replace(/\b[\w\.-]+@[\w\.-]+\.\w{2,4}\b/g, "***@***.***");
@@ -67,7 +69,8 @@ export class AIService {
                     latencyMs: data.latencyMs,
                     tokensUsed: data.tokensUsed || 0,
                     timestamp: new Date(),
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    workflowId: data.workflowId || "unknown"
                 }
             });
             console.log("[AIService] Interaction logged to DB");

@@ -116,6 +116,29 @@ export const googleSheetsConnector: Connector = {
                 output = appendRes.data;
                 break;
 
+            case "update_sheet": // Specifically forces values into a range without appending
+                let updateData = values;
+                if (typeof values === "string") {
+                    try {
+                        updateData = JSON.parse(values);
+                    } catch {
+                        updateData = [values];
+                    }
+                }
+                if (!Array.isArray(updateData)) updateData = [updateData];
+                if (!Array.isArray(updateData[0])) updateData = [updateData];
+
+                const updateRes = await sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: range || "Sheet1!A1",
+                    valueInputOption: "USER_ENTERED",
+                    requestBody: {
+                        values: updateData
+                    }
+                });
+                output = updateRes.data;
+                break;
+
             case "clear_sheet":
                 const clearRes = await sheets.spreadsheets.values.clear({
                     spreadsheetId,

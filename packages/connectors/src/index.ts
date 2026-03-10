@@ -13,6 +13,7 @@ import { printConnector } from "./connectors/print.js";
 import { randomConnector } from "./connectors/random.js";
 import { mathConnector } from "./connectors/math.js";
 import { conditionConnector } from "./connectors/condition.js";
+import { loopConnector } from "./connectors/loop.js";
 
 // Integrations
 import { googleGmailConnector } from "./connectors/google.js";
@@ -40,13 +41,14 @@ import { vectorStoreToolConnector } from "./connectors/vectorStoreTool.js";
 import { memoryConnector } from "./connectors/memory.js";
 import { agentConnector } from "./connectors/agent.js";
 import { complianceNode } from "./connectors/compliance.js";
+import { serpApiConnector } from "./connectors/serpapi.js";
 
 // Re-export individually
 export { startConnector, webhookConnector, cronConnector };
-export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector };
+export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector, loopConnector };
 export { googleGmailConnector, googleDocsConnector, googleSheetsConnector, discordWebhookConnector, slackConnector, twitterConnector, telegramConnector, teamsConnector, emailConnector, huggingFaceConnector, fileConnector };
 export { aiConnector, mcpToolConnector };
-export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector };
+export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector };
 
 // Registry
 const ALL_CONNECTORS: Connector[] = [
@@ -59,6 +61,7 @@ const ALL_CONNECTORS: Connector[] = [
   randomConnector,
   mathConnector,
   conditionConnector,
+  loopConnector,
   googleGmailConnector,
   googleDocsConnector,
   googleSheetsConnector,
@@ -80,7 +83,8 @@ const ALL_CONNECTORS: Connector[] = [
   vectorStoreToolConnector,
   memoryConnector,
   agentConnector,
-  complianceNode
+  complianceNode,
+  serpApiConnector
 ];
 
 export function listConnectors(): Connector[] {
