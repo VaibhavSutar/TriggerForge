@@ -42,13 +42,14 @@ import { memoryConnector } from "./connectors/memory.js";
 import { agentConnector } from "./connectors/agent.js";
 import { complianceNode } from "./connectors/compliance.js";
 import { serpApiConnector } from "./connectors/serpapi.js";
+import { openAIConnector } from "./connectors/openai.js";
 
 // Re-export individually
 export { startConnector, webhookConnector, cronConnector };
 export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector, loopConnector };
 export { googleGmailConnector, googleDocsConnector, googleSheetsConnector, discordWebhookConnector, slackConnector, twitterConnector, telegramConnector, teamsConnector, emailConnector, huggingFaceConnector, fileConnector };
 export { aiConnector, mcpToolConnector };
-export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector };
+export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector, openAIConnector };
 
 // Registry
 const ALL_CONNECTORS: Connector[] = [
@@ -84,7 +85,8 @@ const ALL_CONNECTORS: Connector[] = [
   memoryConnector,
   agentConnector,
   complianceNode,
-  serpApiConnector
+  serpApiConnector,
+  openAIConnector
 ];
 
 export function listConnectors(): Connector[] {
