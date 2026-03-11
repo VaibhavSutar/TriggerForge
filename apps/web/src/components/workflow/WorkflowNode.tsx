@@ -14,6 +14,7 @@ export const getUserId = () => {
 };
 
 import React, { memo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Handle, Position, NodeProps } from "reactflow";
 import {
   Settings,
@@ -816,18 +817,37 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
         </button>
       </div>
 
-      {/* Configuration Panel - expands fully */}
-      <div
-        className={`transition-all duration-300 ease-in-out ${isConfigOpen ? "opacity-100" : "opacity-0 max-h-0"
-          } `}
-        style={{ maxHeight: isConfigOpen ? "none" : 0 }}
-      >
-        {isConfigOpen && (
-          <div className="pt-2 border-t border-gray-800">
-            <div className="text-xs font-medium text-gray-300 mb-2">
-              Configuration
+      {/* Configuration Panel - Full Screen Modal */}
+      {isConfigOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 nodrag"
+            onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', margin: 0, padding: 0 }}
+        >
+          <div 
+              className="flex flex-col bg-[#0B0E14] border border-gray-700/50 rounded-xl shadow-2xl text-white overflow-hidden transform transition-all"
+              style={{ width: '95vw', height: '95vh', maxWidth: 'none', margin: 'auto' }}
+              onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#151C2F]">
+               <div className="flex items-center space-x-3">
+                 <div className={`${getNodeColor(data.nodeType)} p-2 rounded-full text-white`}>
+                   {getNodeIcon(data.nodeType)}
+                 </div>
+                 <h2 className="text-xl font-semibold text-white">Configuration: {data.label}</h2>
+               </div>
+               <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center justify-center" title="Close">
+                  <X className="w-6 h-6 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded" />
+               </button>
             </div>
-            <div className="space-y-3">
+            
+            {/* Body */}
+            <div className="flex-1 overflow-auto p-6 md:p-10 bg-[#0B0E14]">
+              <div className="max-w-4xl mx-auto space-y-8">
+                <div className="bg-[#151C2F] p-6 rounded-lg border border-gray-800 space-y-6">
+                  <h3 className="text-lg font-medium text-white mb-4 border-b border-gray-800 pb-2">Core Settings</h3>
+                  <div className="space-y-4">
               {/* Webhook Special UI */}
               {data.nodeType === "webhook" && (
                 <div className="mb-4 bg-gray-800/30 p-3 rounded border border-gray-700/50">
@@ -906,19 +926,31 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
             )}
 
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 const newKey = prompt("Enter configuration key:");
                 if (newKey && !tempConfig[newKey]) {
                   handleConfigUpdate(newKey, "");
                 }
               }}
-              className="w-full py-1 text-xs text-[#3D5CFF] border border-dashed border-[#3D5CFF]/30 rounded hover:bg-[#3D5CFF]/10 transition-colors duration-200"
+              className="w-full py-3 text-sm font-medium text-[#3D5CFF] border-2 border-dashed border-[#3D5CFF]/30 rounded-lg hover:bg-[#3D5CFF]/10 transition-colors duration-200 mt-6"
             >
               + Add Configuration
             </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-800 bg-[#151C2F] flex justify-end">
+               <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="px-6 py-2 bg-[#3D5CFF] text-white rounded hover:bg-blue-600 transition-colors">
+                  Done
+               </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>,
+        document.body
+      )}
 
       {/* Status indicator */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-800">
