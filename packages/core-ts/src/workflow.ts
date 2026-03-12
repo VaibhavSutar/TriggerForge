@@ -377,7 +377,39 @@ function resolveExpressions(config: any, view: any): any {
           }
         }
 
-        const rendered = Mustache.render(preprocessed, localView);
+        // Deep clone function to override toString on objects and arrays
+        function stringifyObjects(obj: any): any {
+          if (obj === null || typeof obj !== "object") return obj;
+
+          if (Array.isArray(obj)) {
+            // Must be an array clone so mustache #each still works
+            const clone = [...obj];
+            clone.toString = () => JSON.stringify(obj);
+            for (let i = 0; i < clone.length; i++) {
+              clone[i] = stringifyObjects(clone[i]);
+            }
+            return clone;
+          } else {
+            const clone: any = { ...obj };
+            clone.toString = () => JSON.stringify(obj);
+            for (const key in clone) {
+              if (Object.prototype.hasOwnProperty.call(clone, key)) {
+                clone[key] = stringifyObjects(clone[key]);
+              }
+            }
+            return clone;
+          }
+        }
+
+        const stringifiedView = stringifyObjects(localView);
+
+        // We temporarily intercept Mustache escape logic during THIS render call to guarantee JSON string output
+        const originalEscape = Mustache.escape;
+        Mustache.escape = function (text) { return text; };
+
+        const rendered = Mustache.render(preprocessed, stringifiedView);
+
+        Mustache.escape = originalEscape;
         return rendered;
       } catch (err) {
         console.warn(`[Expression] Failed to resolve "${config}":`, err);

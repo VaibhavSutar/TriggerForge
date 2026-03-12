@@ -23,6 +23,10 @@ app.register(fastifyCors, { origin: "*" });
 export const prisma = new PrismaClient();
 
 // Routes
+app.get("/", async (request, reply) => {
+  return { status: "ok", message: "TriggerForge API is alive" };
+});
+
 app.register(authRoutes, { prefix: "/auth" });
 app.register(dbCheckRoute);
 app.register(workflowRoutes, { prefix: "/workflow" });
@@ -32,6 +36,21 @@ app.register(executionRoutes, { prefix: "/execution" });
 app.register(aiRoutes, { prefix: "/ai" });
 app.register(evalRoutes, { prefix: "/eval" });
 
+
+const startKeepAlive = () => {
+  const url = process.env.RENDER_EXTERNAL_URL || "https://trigger-api-tqin.onrender.com";
+  console.log(`[Keep-Alive] Initialized with URL: ${url}`);
+
+  // Ping every 14 minutes to prevent Render from spinning down
+  setInterval(async () => {
+    try {
+      console.log(`[Keep-Alive] Pinging ${url}...`);
+      await fetch(url);
+    } catch (err: any) {
+      console.error("[Keep-Alive] Error:", err.message);
+    }
+  }, 14 * 60 * 1000);
+};
 
 const start = async () => {
   try {
@@ -45,6 +64,9 @@ const start = async () => {
     }
 
     console.log(`🚀 Server running on http://localhost:${process.env.PORT || 4000}`);
+
+    // Start the keep-alive ping loop
+    startKeepAlive();
   } catch (err) {
     console.error("❌ FATAL STARTUP ERROR:", err);
 

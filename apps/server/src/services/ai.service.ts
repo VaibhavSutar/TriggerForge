@@ -60,18 +60,24 @@ export class AIService {
         const maskedPrompt = data.inputPrompt.replace(/\b[\w\.-]+@[\w\.-]+\.\w{2,4}\b/g, "***@***.***");
 
         try {
+            const createData: any = {
+                provider: data.provider,
+                model: data.model,
+                inputPrompt: maskedPrompt,
+                outputResponse: data.outputResponse,
+                latencyMs: data.latencyMs,
+                tokensUsed: data.tokensUsed || 0,
+                timestamp: new Date(),
+                createdAt: new Date().toISOString()
+            };
+
+            // Only attach workflow if it's explicitly provided and valid
+            if (data.workflowId && data.workflowId !== "unknown" && data.workflowId.length > 0) {
+                createData.workflowId = data.workflowId;
+            }
+
             await prisma.aILog.create({
-                data: {
-                    provider: data.provider,
-                    model: data.model,
-                    inputPrompt: maskedPrompt,
-                    outputResponse: data.outputResponse,
-                    latencyMs: data.latencyMs,
-                    tokensUsed: data.tokensUsed || 0,
-                    timestamp: new Date(),
-                    createdAt: new Date().toISOString(),
-                    workflowId: data.workflowId || "unknown"
-                }
+                data: createData
             });
             console.log("[AIService] Interaction logged to DB");
         } catch (err) {

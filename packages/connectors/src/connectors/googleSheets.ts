@@ -92,15 +92,23 @@ export const googleSheetsConnector: Connector = {
                 break;
 
             case "append_row":
+            case "append_rows":
                 // Parse values if they are a string (from UI input)
-                let rowData = values;
-                if (typeof values === "string") {
+                let rowData = config.data || values;
+                if (typeof rowData === "string") {
                     try {
-                        rowData = JSON.parse(values);
+                        const rawStr = rowData.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+                        rowData = JSON.parse(rawStr);
                     } catch {
-                        rowData = [values]; // Treat as single cell
+                        rowData = [rowData]; // Treat as single cell
                     }
                 }
+
+                // If it's an array of objects (like JSON output from AI)
+                if (Array.isArray(rowData) && rowData.length > 0 && typeof rowData[0] === 'object' && !Array.isArray(rowData[0])) {
+                    rowData = rowData.map(item => Object.values(item));
+                }
+
                 if (!Array.isArray(rowData)) rowData = [rowData]; // Ensure array of arrays or single array?
                 // API expects values: [ [co1, col2] ]
                 if (!Array.isArray(rowData[0])) rowData = [rowData];

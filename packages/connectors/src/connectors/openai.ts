@@ -54,7 +54,9 @@ export const openAIConnector: Connector = {
                     }
                 }
 
-                messages.push({ role: "user", content: input });
+                const userContent = typeof input === 'string' ? input : JSON.stringify(input);
+
+                messages.push({ role: "user", content: userContent });
 
                 const completion = await openai.chat.completions.create({
                     messages,
@@ -63,7 +65,7 @@ export const openAIConnector: Connector = {
 
                 const response = completion.choices[0].message.content;
                 ctx.logs.push(`[openai] Generated response (${response?.length} chars)`);
-                return { success: true, output: response };
+                return { success: true, output: { text: response } };
             }
 
             return { success: false, error: "Unknown operation: " + operation, output: null };

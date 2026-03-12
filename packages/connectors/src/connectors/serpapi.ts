@@ -40,8 +40,11 @@ export const serpApiConnector: Connector = {
             return {
                 success: true,
                 output: {
-                    results: response.data,
-                    organic_results: response.data.organic_results || []
+                    organic_results: (response.data.organic_results || []).map((r: any) => ({
+                        title: r.title,
+                        link: r.link,
+                        snippet: r.snippet
+                    }))
                 }
             };
         } catch (error: any) {
