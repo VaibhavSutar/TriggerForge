@@ -12,7 +12,7 @@ export class AIService {
 
     async generateText(
         prompt: string,
-        model: string = "gemini-2.0-flash",
+        model: string = "gemini-1.5-flash",
         system?: string,
         options?: { baseURL?: string, apiKey?: string, workflowId?: string }
     ): Promise<string> {
@@ -94,17 +94,24 @@ export class AIService {
         throw new Error("Tool calling not yet implemented for Gemini adapter");
     }
 
-    async generateWorkflow(prompt: string): Promise<any> {
+    async generateWorkflow(prompt: string, connectors?: { id: string, title?: string }[]): Promise<any> {
         if (!this.genAI) throw new Error("AI Service not configured");
 
-        const systemPrompt = `
-You are a workflow generator for TriggerForge.
-Your goal is to convert user requests into a valid Workflow JSON structure.
+        const connectorListStr = connectors
+            ? connectors.map(c => `- ${c.id}${c.title ? ` (${c.title})` : ''}`).join('\n')
+            : `- cron (schedule trigger)\n- webhook (http trigger)\n- http (request)\n- ai (text gen using gemini-2.0-flash)\n- condition (logic branching)\n- loop (array iteration)\n- delay (wait time)\n- google_gmail (Gmail)\n- google_sheets (Google Sheets)\n- slack (Slack notifications)`;
 
-### Available Nodes (Connectors):
-- Trigger: cron (schedule), webhook (http trigger)
-- Action: http (request), specific tools: google_gmail, google_sheets, slack, discord, email, ai (text gen)
-- Logic: condition, delay, loop
+        const systemPrompt = `
+You are a workflow architect for TriggerForge.
+Your goal is to convert user requests into a valid Workflow JSON structure using the available connectors.
+
+### Available Connectors (Use these IDs for "nodeType"):
+${connectorListStr}
+
+### Logic Nodes (Always Available):
+- condition (input: boolean expression)
+- delay (input: seconds)
+- loop (input: { items: "{{$node.id}}" })
 
 ### Output Format:
 Return ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json).
@@ -128,15 +135,16 @@ Structure:
 }
 
 ### Rules:
-1. Always start with a Trigger node (cron or webhook) unless specified otherwise.
-2. Connect nodes logically.
-3. Use reasonable default configs.
-4. "nodeType" must match one of: cron, webhook, http, email, ai, condition, delay, print, google_gmail, google_sheets, slack, discord, twitter.
+1. Start with a Trigger (cron or webhook).
+2. Use MUSTACHE syntax for data passing, e.g., "{{$node.node_1.property}}".
+3. For 'ai' nodes, always enforce "Output ONLY the final content" in the prompt.
+4. For Google Sheets, default to sheetName 'Leads' if not specified.
+5. If the request is complex, use 'loop' and 'condition' nodes correctly.
 `;
 
         try {
-            // Using gemini-2.0-flash as it is available and fast
-            const m = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            // Using gemini-2.0-flash-exp for the latest experimental features
+            const m = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
             const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
 

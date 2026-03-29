@@ -3,14 +3,14 @@ import { aiService } from "../services";
 
 export async function aiRoutes(app: FastifyInstance) {
     app.post("/generate-workflow", async (req, reply) => {
-        const { prompt, userId } = req.body as { prompt: string; userId: string };
+        const { prompt, userId, connectors } = req.body as { prompt: string; userId: string; connectors?: any[] };
 
         if (!prompt) {
             return reply.code(400).send({ error: "Missing prompt" });
         }
 
         try {
-            const workflow = await aiService.generateWorkflow(prompt);
+            const workflow = await aiService.generateWorkflow(prompt, connectors);
             return reply.send({ ok: true, workflow });
         } catch (error: any) {
             console.error("AI Generation Error:", error);
