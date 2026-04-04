@@ -14,7 +14,7 @@ export class AIService {
         prompt: string,
         model: string = "gemini-1.5-flash",
         system?: string,
-        options?: { baseURL?: string, apiKey?: string, workflowId?: string }
+        options?: { baseURL?: string, apiKey?: string, workflowId?: string, thinking?: boolean }
     ): Promise<string> {
         let client = this.genAI;
         if (options?.apiKey) {
@@ -25,7 +25,18 @@ export class AIService {
 
         try {
             const startTime = Date.now();
-            const m = client.getGenerativeModel({ model });
+
+            // For reasoning models (Thinking), some require specific config flags
+            const modelConfig: any = { model };
+            if (options?.thinking) {
+                // In some versions of the SDK, you might need special handling. 
+                // For direct model support or if using specific 'thinking' versions.
+                // We'll pass it if requested and let the SDK handle it.
+                modelConfig.thinkingConfig = { includeThoughts: true };
+            }
+
+            const m = client.getGenerativeModel(modelConfig);
+
             const result = await m.generateContent(prompt);
             const response = result.response;
             const text = response.text();
@@ -109,9 +120,13 @@ Your goal is to convert user requests into a valid Workflow JSON structure using
 ${connectorListStr}
 
 ### Logic Nodes (Always Available):
-- condition (input: boolean expression)
-- delay (input: seconds)
-- loop (input: { items: "{{$node.id}}" })
+- condition (config: { expression: "boolean logic" })
+- delay (config: { seconds: number })
+- loop (config: { items: "{{$node.id}}" })
+
+### Handle JSON Output:
+If a node (like 'ai') returns JSON, use "{{$node.id.fieldName}}" to access properties.
+Nodes automatically extract JSON from markdown or raw text.
 
 ### Output Format:
 Return ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json).
@@ -137,9 +152,11 @@ Structure:
 ### Rules:
 1. Start with a Trigger (cron or webhook).
 2. Use MUSTACHE syntax for data passing, e.g., "{{$node.node_1.property}}".
-3. For 'ai' nodes, always enforce "Output ONLY the final content" in the prompt.
-4. For Google Sheets, default to sheetName 'Leads' if not specified.
-5. If the request is complex, use 'loop' and 'condition' nodes correctly.
+3. For 'ai' nodes extracting leads, always check both search fields: "{{$node.id.output.organic_results}}{{$node.id.output.leads_json}}".
+4. 'google_maps_deep_scraper' returns results in 'leads_json'. 'serpapi' returns results in 'organic_results'.
+5. For 'ai' nodes, always enforce "Output ONLY the final content" in the prompt.
+6. For Google Sheets, default to sheetName 'Leads' if not specified.
+7. If the request is complex, use 'loop' and 'condition' nodes correctly.
 `;
 
         try {

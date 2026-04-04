@@ -93,14 +93,24 @@ export const googleSheetsConnector: Connector = {
 
             case "append_row":
             case "append_rows":
-                // Parse values if they are a string (from UI input)
+                // Parse values if they are a string (from UI input or AI output)
                 let rowData = config.data || values;
                 if (typeof rowData === "string") {
                     try {
-                        const rawStr = rowData.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-                        rowData = JSON.parse(rawStr);
+                        // More robust JSON extraction: find the first '[' and last ']'
+                        const firstBracket = rowData.indexOf("[");
+                        const lastBracket = rowData.lastIndexOf("]");
+                        if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                            const potentialJson = rowData.substring(firstBracket, lastBracket + 1);
+                            rowData = JSON.parse(potentialJson);
+                        } else {
+                            // Try as a whole if no brackets found (legacy behavior)
+                            const rawStr = rowData.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+                            rowData = JSON.parse(rawStr);
+                        }
                     } catch {
-                        rowData = [rowData]; // Treat as single cell
+                        ctx.logs.push(`[google_sheets] Failed to parse JSON from string. Treating as flat text.`);
+                        rowData = [[rowData]]; // Treat as single row, single cell
                     }
                 }
 

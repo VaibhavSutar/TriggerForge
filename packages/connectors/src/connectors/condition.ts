@@ -7,12 +7,27 @@ export const conditionConnector: Connector = {
   type: "logic",
 
   async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
-    const { expression } = config; // e.g., "{{state.user.age}} > 18"
-    if (!expression) throw new Error("Condition connector missing 'expression'");
+    // Accept condition or expression as input keys
+    const condition = config.condition || config.expression;
+    if (!condition) throw new Error("Condition connector missing 'expression' or 'condition' property");
 
-    const rendered = Mustache.render(expression, { state: ctx.state, ...ctx.state });
-    const result = eval(rendered); // ⚠️ sandbox later for security
-    ctx.logs.push(`[condition] ${expression} => ${result}`);
-    return { success: true, output: !!result };
+    const rendered = Mustache.render(condition, { state: ctx.state, ...ctx.state }).trim();
+
+    try {
+      const passed = !!eval(rendered);
+      ctx.logs.push(`[condition] ${condition} => ${passed}`);
+      
+      // Cleanest approach: Return a structured result that the engine 
+      // can recognize to maintain data flow.
+      return { 
+        success: true, 
+        output: { 
+          passed, 
+          data: ctx.input 
+        } 
+      };
+    } catch (err: any) {
+      throw new Error(`Failed to evaluate condition "${rendered}": ${err.message}.`);
+    }
   }
 };

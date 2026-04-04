@@ -36,8 +36,11 @@ export async function hookRoutes(fastify: FastifyInstance) {
         // Use ExecutionService for logging and persistence
         executionService.runWorkflow(workflowId, input, "webhook")
             .then(result => {
-                if (result.skipped) console.log(`[Webhook] Skipped: ${result.reason}`);
-                else console.log(`[Webhook] Execution ${result.executionId} completed: ${result.success}`);
+                if ("skipped" in result) {
+                    console.log(`[Webhook] Skipped: ${result.reason}`);
+                } else {
+                    console.log(`[Webhook] Execution ${result.executionId} completed: ${result.success}`);
+                }
             })
             .catch(err => console.error("Webhook Execution Error:", err));
 

@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+@keyframes run-glow {
+  0%, 100% { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+  50% { border-color: rgba(59, 130, 246, 1); box-shadow: 0 0 25px rgba(59, 130, 246, 0.6); }
+}
+
+@keyframes scanning {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+.animate-run-glow {
+  animation: run-glow 2s infinite ease-in-out;
+}
+
+.animate-scanning {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-scanning::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #3b82f6, transparent);
+  animation: scanning 2s infinite linear;
+  box-shadow: 0 0 8px #3b82f6;
+  z-index: 10;
+}

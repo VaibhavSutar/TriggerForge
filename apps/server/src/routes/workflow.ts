@@ -258,12 +258,11 @@ export async function workflowRoutes(app: FastifyInstance) {
       }
 
       const input = req.body ?? {};
-      const result = await executionService.runWorkflow(workflowRecord.id, input, "manual");
+      const result = await executionService.runWorkflowBackground(workflowRecord.id, input, "manual");
 
       return reply.send({
         ok: true,
         executionId: result.executionId,
-        result: result.result,
       });
     } catch (error) {
       app.log.error(error, "Error running workflow");

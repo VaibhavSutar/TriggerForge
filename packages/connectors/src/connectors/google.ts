@@ -8,15 +8,24 @@ export const googleGmailConnector: Connector = {
     type: "action",
 
     async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
-        const { operation = "send_email", to, subject, body, userId } = config;
+        let { operation = "send_email", to, subject, body, userId, messageId, addLabels, removeLabels } = config;
 
-        // In a real app, we need to resolve the USER's access token here.
+        // Global Smart Fallback: Resolve fields from ctx.input or ctx.item if missing in config
+        const input = ctx.input || {};
+        const item = ctx.item || {};
+        if (!messageId) messageId = input.id || input.messageId || item.id || item.messageId;
+
+        if (operation === "send_email") {
+            if (!to) to = input.to;
+            if (!subject) subject = input.subject;
+            if (!body) body = input.body;
+        }
         if (!ctx.services?.oauth) {
             throw new Error("OAuth Service not available");
         }
 
         let auth;
-        const accessToken = config.accessToken || ctx.state?.accessToken;
+        const accessToken = config.accessToken || ctx.state?.connections?.google?.accessToken || ctx.state?.accessToken;
         if (accessToken) {
             try {
                 const oauth2Client = new google.auth.OAuth2();
@@ -111,36 +120,103 @@ export const googleGmailConnector: Connector = {
             }
 
             if (operation === "move_to_spam") {
-                if (!config.messageId) throw new Error("Missing messageId for move_to_spam");
+                if (!messageId) throw new Error("Missing messageId for move_to_spam");
                 await gmail.users.messages.modify({
                     userId: 'me',
-                    id: config.messageId,
+                    id: messageId,
                     requestBody: {
                         addLabelIds: ['SPAM'],
                         removeLabelIds: ['INBOX']
                     }
                 });
-                ctx.logs.push(`[google_gmail] Moved message ${config.messageId} to spam`);
-                return { success: true, output: { message: `Moved ${config.messageId} to spam` } };
+                ctx.logs.push(`[google_gmail] Moved message ${messageId} to spam`);
+                return { success: true, output: { message: `Moved ${messageId} to spam` } };
             }
 
             if (operation === "modify_labels") {
-                if (!config.messageId) throw new Error("Missing messageId for modify_labels");
+                if (!messageId) throw new Error("Missing messageId for modify_labels");
 
-                const addLabels = config.addLabels ? config.addLabels.split(',').map((l: string) => l.trim()) : [];
-                const removeLabels = config.removeLabels ? config.removeLabels.split(',').map((l: string) => l.trim()) : [];
-
-                await gmail.users.messages.modify({
-                    userId: 'me',
-                    id: config.messageId,
-                    requestBody: {
-                        addLabelIds: addLabels,
-                        removeLabelIds: removeLabels
+                const parseLabels = (val: any) => {
+                    if (Array.isArray(val)) return val;
+                    if (typeof val === "string") {
+                        const trimmed = val.trim();
+                        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                            try {
+                                return JSON.parse(trimmed);
+                            } catch (e) {
+                                // Fallback to split if JSON parse fails
+                            }
+                        }
+                        return trimmed.split(',').map((l: string) => l.trim()).filter(Boolean);
                     }
-                });
+                    return [];
+                };
 
-                ctx.logs.push(`[google_gmail] Modified labels for ${config.messageId}`);
-                return { success: true, output: { message: `Modified labels for ${config.messageId}` } };
+                try {
+                    // 1. Fetch current labels to map Names -> IDs
+                    const labelsList = await gmail.users.labels.list({ userId: 'me' });
+                    const existingLabels = labelsList.data.labels || [];
+                    const nameToId: Record<string, string> = {};
+                    existingLabels.forEach(l => {
+                        if (l.name && l.id) nameToId[l.name.toLowerCase()] = l.id;
+                        if (l.id) nameToId[l.id.toLowerCase()] = l.id; // Also map ID to ID for compatibility
+                    });
+
+                    const resolveLabelIds = async (names: string[]) => {
+                        const ids: string[] = [];
+                        for (const name of names) {
+                            const normalized = name.trim();
+                            if (!normalized) continue;
+
+                            // Check if we already have an ID for this name (case-insensitive)
+                            if (nameToId[normalized.toLowerCase()]) {
+                                ids.push(nameToId[normalized.toLowerCase()]);
+                            } else {
+                                // CREATE the label if it doesn't exist!
+                                try {
+                                    ctx.logs.push(`[google_gmail] Creating new label: "${normalized}"`);
+                                    const newLabel = await gmail.users.labels.create({
+                                        userId: 'me',
+                                        requestBody: {
+                                            name: normalized,
+                                            labelListVisibility: 'labelShow',
+                                            messageListVisibility: 'show'
+                                        }
+                                    });
+                                    if (newLabel.data.id) {
+                                        const newId = newLabel.data.id;
+                                        ids.push(newId);
+                                        nameToId[normalized.toLowerCase()] = newId; // Cache it
+                                    }
+                                } catch (createErr: any) {
+                                    ctx.logs.push(`[google_gmail] Warning: Could not create label "${normalized}": ${createErr.message}`);
+                                }
+                            }
+                        }
+                        return ids;
+                    };
+
+                    const labelsToAdd = await resolveLabelIds(parseLabels(addLabels));
+                    const labelsToRemove = await resolveLabelIds(parseLabels(removeLabels));
+
+                    if (labelsToAdd.length === 0 && labelsToRemove.length === 0) {
+                        return { success: true, output: { message: "No labels to update" } };
+                    }
+
+                    const modifyResponse = await gmail.users.messages.modify({
+                        userId: 'me',
+                        id: messageId,
+                        requestBody: {
+                            addLabelIds: labelsToAdd,
+                            removeLabelIds: labelsToRemove
+                        }
+                    });
+
+                    ctx.logs.push(`[google_gmail] Modified labels for ${messageId}`);
+                    return { success: true, output: { message: `Modified labels for ${messageId}` } };
+                } catch (err: any) {
+                    throw err;
+                }
             }
 
             // Default: send_email

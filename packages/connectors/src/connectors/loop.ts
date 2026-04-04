@@ -6,8 +6,8 @@ export const loopConnector: Connector = {
     type: "logic",
 
     async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
-        let { array } = config;
-
+        let array = config.array || config.items;
+        
         // If array is not explicitly provided, try to use the input
         if (!array) {
             array = ctx.input;
@@ -17,15 +17,22 @@ export const loopConnector: Connector = {
         console.log(array);
 
         if (typeof array === "string") {
-            // Pre-clean: sometimes AI returns ```json...``` despite instructions
-            let cleanStr = array.trim();
-            cleanStr = cleanStr.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
-
             try {
-                array = JSON.parse(cleanStr);
+                // More robust JSON extraction: find the first '[' and last ']'
+                const firstBracket = array.indexOf("[");
+                const lastBracket = array.lastIndexOf("]");
+                if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                    const potentialJson = array.substring(firstBracket, lastBracket + 1);
+                    array = JSON.parse(potentialJson);
+                } else {
+                    // Try as a whole if no brackets found (legacy behavior)
+                    let cleanStr = array.trim();
+                    cleanStr = cleanStr.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+                    array = JSON.parse(cleanStr);
+                }
             } catch (err: any) {
                 // Return descriptive error so the user can debug the raw payload
-                throw new Error(`Input string is not a valid JSON array. Received: ${cleanStr.substring(0, 100)}...`);
+                throw new Error(`Input string is not a valid JSON array. Received: ${array.substring(0, 100)}...`);
             }
         }
 

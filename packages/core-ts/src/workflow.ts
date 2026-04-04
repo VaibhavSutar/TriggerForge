@@ -20,29 +20,23 @@ Mustache.escape = function (text) {
 ----------------------------------- */
 async function executeNode(
   node: WorkflowNode,
-  context: WorkflowContext
+  context: WorkflowContext,
+  iterationResults: Record<string, any> = {}
 ): Promise<NodeExecutionResult> {
-  const { id, type, config } = node;
+  const { id, config } = node;
+  const type = node.type === "workflowNode" ? node.data?.nodeType : node.type;
 
-  // 1. Resolve Inputs
-  // In a graph traversal, "input" is what triggers the node.
-  // But we might also want to access specific data from previous nodes via variables.
-  // The 'context.input' here is the specific input passed to this node (e.g. from the edge),
-  // OR the global input if it's a trigger.
-
-  // For now, we use the accumulating context.nodeResults for variables.
-  // The direct input to the run function is the data passed from the *previous* node.
-  // But since a node can have multiple parents, 'input' is ambiguous in the generic sense.
-  // We'll rely on the context.lastOutput OR the specific edge data.
-
-  // Let's use the 'input' from the context which we set before calling this.
   const currentInput = context.input;
 
   /* ----------------------------------
    Create Enhanced View for Mustache
    ----------------------------------- */
+  // Merge global results with iteration-specific results
+  const combinedResults = { ...context.nodeResults, ...iterationResults };
+
   const view: any = {
-    $node: { ...context.nodeResults },
+    $node: combinedResults,
+    item: context.item || currentInput,
     previous: currentInput,
     input: currentInput,
     state: context.state,
@@ -52,18 +46,11 @@ async function executeNode(
   // Add Label-based access to $node
   if (context.nodeLabels) {
     for (const [nid, label] of Object.entries(context.nodeLabels)) {
-      if (context.nodeResults[nid] !== undefined) {
-        // Normalize label to be safe for Mustache (optional, but good practice)
-        // For now, we assume the user accesses it via ["Label"] format in valid JS,
-        // but Mustache {{ $node.Label }} requires a valid identifier.
-        // We'll trust the safe substitution logic or map access.
-        view.$node[label] = context.nodeResults[nid];
+      if (combinedResults[nid] !== undefined) {
+        view.$node[label] = combinedResults[nid];
       }
     }
   }
-
-  // Debug View
-  // console.log("Resolving config with view keys:", Object.keys(view));
 
   const resolvedConfig = resolveExpressions(config, view);
 
@@ -81,22 +68,44 @@ async function executeNode(
 
   try {
     const result: NodeExecutionResult = await connector.run(
-      { input: currentInput, logs: context.logs, services: context.services, state: context.state },
+      {
+        input: currentInput,
+        item: context.item,
+        logs: context.logs,
+        services: context.services,
+        state: context.state
+      },
       resolvedConfig
     );
 
+    // Sanitize logs...
+    for (let i = 0; i < context.logs.length; i++) {
+      if (typeof context.logs[i] === 'string') {
+        context.logs[i] = { nodeId: id, message: context.logs[i] as any, timestamp: Date.now() };
+      }
+    }
+
     if (!result.success) {
-      context.logs.push({
-        nodeId: id,
-        message: "Execution failed",
-        data: result.error,
-        timestamp: Date.now(),
-      });
-      // We return the failure result but don't throw, so the engine can decide to stop or handle error paths
+      context.logs.push({ nodeId: id, message: "Execution failed", data: result.error, timestamp: Date.now() });
       return result;
     }
 
-    context.nodeResults[id] = result.output;
+    const nodeOutput = result.output;
+    let storedResult: any;
+    if (typeof nodeOutput === 'object' && nodeOutput !== null) {
+      if (Array.isArray(nodeOutput)) {
+        storedResult = nodeOutput;
+        (storedResult as any).output = nodeOutput;
+      } else {
+        storedResult = { ...nodeOutput, output: nodeOutput };
+      }
+    } else {
+      storedResult = { output: nodeOutput, value: nodeOutput };
+    }
+
+    // Update global results AND iteration results
+    context.nodeResults[id] = storedResult;
+    iterationResults[id] = storedResult;
 
     context.logs.push({
       nodeId: id,
@@ -104,22 +113,9 @@ async function executeNode(
       data: result.output,
       timestamp: Date.now(),
     });
-    console.log(
-      "[ENGINE]",
-      id,
-      `(${type})`,
-      "completed"
-    );
 
     return result;
   } catch (err: any) {
-    console.error(`[ENGINE] Node ${id} crashed:`, err);
-    context.logs.push({
-      nodeId: id,
-      message: "Execution crashed",
-      data: err.message,
-      timestamp: Date.now(),
-    });
     return { success: false, error: err.message };
   }
 }
@@ -219,7 +215,8 @@ export async function executeWorkflowFromJson(
   // Priority: "trigger", "webhook", "schedule" types are starts.
   // OR nodes with 0 incoming edges.
   for (const node of nodes) {
-    const isTrigger = ["trigger", "webhook", "cron", "start"].includes(node.type);
+    const type = node.type === "workflowNode" ? node.data?.nodeType : node.type;
+    const isTrigger = ["trigger", "webhook", "cron", "start"].includes(type);
     if (isTrigger) {
       queue.push(node.id);
     } else if (!incomingEdgeCount.has(node.id)) {
@@ -244,85 +241,63 @@ export async function executeWorkflowFromJson(
 
   // We need to track *inputs* to nodes.
   // When a node finishes, it "fires" data to its children.
-  // We'll use a queue of { nodeId, inputPayload }.
-  const execQueue: { nodeId: string; input: any }[] = queue.map(id => ({ nodeId: id, input: initialInput }));
-
-  const executedNodes = new Set<string>();
+  // We'll use a queue of { nodeId, inputPayload, item, iterationResults }.
+  const execQueue: { nodeId: string; input: any; item?: any; iterationResults: Record<string, any> }[] =
+    queue.map(id => ({ nodeId: id, input: initialInput, iterationResults: {} }));
 
   while (execQueue.length > 0) {
-    const { nodeId, input } = execQueue.shift()!;
-
+    const { nodeId, input: currentInput, item, iterationResults } = execQueue.shift()!;
     const node = nodeMap.get(nodeId);
     if (!node) continue;
 
-    // Update context input for this node execution
-    context.input = input;
+    const nodeType = node.data?.nodeType || node.type;
 
-    if (callbacks?.onNodeStart) await callbacks.onNodeStart(nodeId, input);
-    console.log(`[ENGINE] Running ${nodeId} (${node.type})`);
-    const result = await executeNode(node, context);
+    // Pass everything to executeNode
+    const nodeContext: WorkflowContext = { ...context, input: currentInput, item };
+    const result = await executeNode(node, nodeContext, iterationResults);
 
-    executedNodes.add(nodeId);
-
-    if (!result.success) {
-      if (callbacks?.onNodeError) await callbacks.onNodeError(nodeId, result.error);
-      console.warn(`[ENGINE] Node ${nodeId} failed. Stopping branch.`);
-      continue;
-    }
+    if (!result.success) continue;
 
     if (callbacks?.onNodeFinish) await callbacks.onNodeFinish(nodeId, result.output);
 
-    // Determine Next Nodes
     const outEdges = adjList.get(nodeId) || [];
 
-    if (node.type === "condition") {
-      // BRANCHING LOGIC
-      // Condition output should be boolean (or truthy/falsy)
-      const isTrue = !!result.output;
+    if (nodeType === "condition") {
+      const res = result.output;
+      const isTrue = res && typeof res === 'object' && 'passed' in res ? res.passed : !!res;
+      const nextInput = res && typeof res === 'object' && 'data' in res ? res.data : res;
 
       for (const edge of outEdges) {
-        // Check edge handle
-        // We assume 'sourceHandle' is 'true' or 'false' (or 'a'/'b') 
-        // If standard handle (null/undefined), we treat as True path?
-        // Let's look for standard patterns.
-
+        const nextIterationResults = { ...iterationResults }; // Snapshot
         if (edge.sourceHandle === "true" || edge.sourceHandle === "a") {
-          if (isTrue) execQueue.push({ nodeId: edge.target, input: result.output });
+          if (isTrue) execQueue.push({ nodeId: edge.target, input: nextInput, item, iterationResults: nextIterationResults });
         } else if (edge.sourceHandle === "false" || edge.sourceHandle === "b") {
-          if (!isTrue) execQueue.push({ nodeId: edge.target, input: result.output });
+          if (!isTrue) execQueue.push({ nodeId: edge.target, input: nextInput, item, iterationResults: nextIterationResults });
         } else {
-          // Default handle -> treat as Pass Through (runs always? or only if true?)
-          // Usually standard handle runs if success.
-          // For condition, standard handle might be ambiguous.
-          // Let's assume if it's a condition node, we MUST match handle.
-          // If edge has NO handle id, maybe it's an old edge.
-          // Default to: Run if true.
-          if (isTrue) execQueue.push({ nodeId: edge.target, input: result.output });
+          if (isTrue) execQueue.push({ nodeId: edge.target, input: nextInput, item, iterationResults: nextIterationResults });
         }
       }
-    } else if (node.type === "loop" || node.data?.nodeType === "loop") {
-      // LOOP LOGIC
+    } else if (nodeType === "loop") {
       let items = result.output;
-      if (typeof items === "string") {
-        try { items = JSON.parse(items); } catch { }
-      }
       if (Array.isArray(items)) {
-        for (const item of items) {
+        for (const loopItem of items) {
           for (const edge of outEdges) {
-            execQueue.push({ nodeId: edge.target, input: item });
+            execQueue.push({
+              nodeId: edge.target,
+              input: loopItem,
+              item: loopItem,
+              iterationResults: { ...iterationResults } // Start isolated body
+            });
           }
         }
       } else {
-        console.warn(`[ENGINE] Loop node ${nodeId} output is not an array. Falling back to normal flow.`);
         for (const edge of outEdges) {
-          execQueue.push({ nodeId: edge.target, input: items });
+          execQueue.push({ nodeId: edge.target, input: items, item, iterationResults: { ...iterationResults } });
         }
       }
     } else {
-      // NORMAL FLOW
-      // Pass output to all children
       for (const edge of outEdges) {
-        execQueue.push({ nodeId: edge.target, input: result.output });
+        execQueue.push({ nodeId: edge.target, input: result.output, item, iterationResults: { ...iterationResults } });
       }
     }
   }
@@ -348,55 +323,42 @@ function resolveExpressions(config: any, view: any): any {
     // Check if it looks like a template
     if (config.includes("{{")) {
       try {
-        // Pre-process safe keys
-        const nodeMap: Record<string, string> = {};
-        let counter = 0;
+        // Pre-process bracket notation like [0] or ["key"] into .0 or .key
+        // to make them compatible with Mustache paths.
+        const localView = { ...view };
+        if (localView.$node) localView.$node = { ...localView.$node };
 
         const preprocessed = config.replace(
-          /\[["']([^"']+)["']\]/g,
+          /\[["']?([^"'\]]+)["']?\]/g,
           (match, key) => {
-            // 1. If strict match in view (best case)
-            // We check $node
+            // If the key is a node ID or label, ensure it's in the local view for easy access
             if (view.$node && view.$node[key] !== undefined) {
-              const safeKey = `__REF_${counter++}`;
-              nodeMap[safeKey] = key;
-              return `.${safeKey}`;
+              // No need for a random ref, just ensuring key is reachable
             }
-            // 2. Fallback: might be accessing other properties 
             return "." + key;
           }
         );
-
-        // Augment view with safe keys locally
-        const localView = { ...view };
-        if (localView.$node) localView.$node = { ...localView.$node }; // shallow copy node object
-
-        for (const [safe, original] of Object.entries(nodeMap)) {
-          if (localView.$node) {
-            localView.$node[safe] = localView.$node[original];
-          }
-        }
 
         // Deep clone function to override toString on objects and arrays
         function stringifyObjects(obj: any): any {
           if (obj === null || typeof obj !== "object") return obj;
 
           if (Array.isArray(obj)) {
-            // Must be an array clone so mustache #each still works
-            const clone = [...obj];
-            clone.toString = () => JSON.stringify(obj);
-            for (let i = 0; i < clone.length; i++) {
-              clone[i] = stringifyObjects(clone[i]);
-            }
-            return clone;
+            const arr = [...obj].map(item => stringifyObjects(item));
+            // Add a toString that returns the JSON representation
+            (arr as any).toString = () => JSON.stringify(obj);
+            return arr;
           } else {
             const clone: any = { ...obj };
-            clone.toString = () => JSON.stringify(obj);
+            // Ensure properties which are objects/arrays are also processed
             for (const key in clone) {
               if (Object.prototype.hasOwnProperty.call(clone, key)) {
                 clone[key] = stringifyObjects(clone[key]);
               }
             }
+            // Add a toString that returns the JSON representation
+            // This allows {{variable}} to output a JSON string for complex objects
+            clone.toString = () => JSON.stringify(obj);
             return clone;
           }
         }

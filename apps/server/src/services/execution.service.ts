@@ -6,7 +6,7 @@ import { aiService, mcpManager, oauthService } from "./index";
 export class ExecutionService {
 
     /**
-     * Run workflow and log execution to DB
+     * Run workflow and log execution to DB (Blocking)
      */
     async runWorkflow(workflowId: string, input: any = {}, triggerType: string = "manual") {
         const workflow = await prisma.workflow.findUnique({
@@ -37,6 +37,52 @@ export class ExecutionService {
             }
         });
 
+        return this._execute(execution, workflow, input);
+    }
+
+    /**
+     * Start workflow in background and return executionId immediately
+     */
+    async runWorkflowBackground(workflowId: string, input: any = {}, triggerType: string = "manual") {
+        const workflow = await prisma.workflow.findUnique({
+            where: { id: workflowId }
+        });
+
+        if (!workflow || !workflow.json) {
+            throw new Error("Workflow not found or invalid");
+        }
+
+        // Create Pending Execution Record
+        const execution = await prisma.execution.create({
+            data: {
+                workflowId,
+                status: "RUNNING",
+                input: input ?? {},
+                logs: [],
+            }
+        });
+
+        // Run in background
+        this._execute(execution, workflow, input)
+            .catch(err => console.error(`[ExecutionService] Background execution ${execution.id} failed:`, err));
+
+        return { executionId: execution.id };
+    }
+
+    /**
+     * Internal execution logic
+     */
+    private async _execute(execution: any, workflow: any, input: any) {
+        // Maintain local logs to avoid read-modify-write issues or database field push failures (Json)
+        const executionLogs: any[] = [];
+        const updateLogsInDb = async (newLog: any) => {
+            executionLogs.push(newLog);
+            await prisma.execution.update({
+                where: { id: execution.id },
+                data: { logs: executionLogs }
+            });
+        };
+
         // Fetch Google Credentials (if any)
         console.log(`[ExecutionService] Fetching Google creds for user: ${workflow.userId}`);
         const googleCred = await prisma.credential.findFirst({
@@ -59,7 +105,7 @@ export class ExecutionService {
 
         let currentOutput: Record<string, any> = {};
 
-        console.log(`[ExecutionService] Starting execution ${execution.id} for workflow ${workflowId}`);
+        console.log(`[ExecutionService] Starting execution ${execution.id} for workflow ${workflow.id}`);
 
         try {
             const result = await executeWorkflowFromJson(
@@ -73,53 +119,33 @@ export class ExecutionService {
                 { connections }, // Initial State with connections
                 {
                     onNodeStart: async (nodeId, val) => {
-                        // Push log
-                        await prisma.execution.update({
-                            where: { id: execution.id },
-                            data: {
-                                logs: {
-                                    push: {
-                                        nodeId,
-                                        message: "Execution started",
-                                        data: val,
-                                        timestamp: Date.now()
-                                    }
-                                } as any
-                            }
+                        await updateLogsInDb({
+                            nodeId,
+                            message: "Execution started",
+                            data: val,
+                            timestamp: Date.now()
                         });
                     },
                     onNodeFinish: async (nodeId, val) => {
-                        // Update Output & Log
                         currentOutput[nodeId] = val;
-
+                        await updateLogsInDb({
+                            nodeId,
+                            message: "Execution completed",
+                            data: val,
+                            timestamp: Date.now()
+                        });
+                        // Also update overall output for finality
                         await prisma.execution.update({
                             where: { id: execution.id },
-                            data: {
-                                output: currentOutput,
-                                logs: {
-                                    push: {
-                                        nodeId,
-                                        message: "Execution completed",
-                                        data: val,
-                                        timestamp: Date.now()
-                                    }
-                                } as any
-                            }
+                            data: { output: currentOutput }
                         });
                     },
                     onNodeError: async (nodeId, err) => {
-                        await prisma.execution.update({
-                            where: { id: execution.id },
-                            data: {
-                                logs: {
-                                    push: {
-                                        nodeId,
-                                        message: "Execution failed",
-                                        data: err,
-                                        timestamp: Date.now()
-                                    }
-                                } as any
-                            }
+                        await updateLogsInDb({
+                            nodeId,
+                            message: "Execution failed",
+                            data: err,
+                            timestamp: Date.now()
                         });
                     }
                 }

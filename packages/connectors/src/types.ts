@@ -1,6 +1,7 @@
 export interface ConnectorContext {
   state: Record<string, any>;
   input?: any;
+  item?: any; // [NEW] Added for loop iteration context
   logs: any[];
   services?: Record<string, any>; // [NEW] injected services
 }

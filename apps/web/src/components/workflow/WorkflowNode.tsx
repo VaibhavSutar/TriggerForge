@@ -47,7 +47,8 @@ import {
   Calendar,
   Zap,
   Users,
-  Brain
+  Brain,
+  Navigation
 } from "lucide-react";
 import { DataInspector } from "./DataInspector";
 
@@ -97,6 +98,12 @@ const getNodeIcon = (nodeType: string) => {
       return <Twitter className="w-4 h-4" />;
     case "teams":
       return <Users className="w-4 h-4" />;
+    case "serpapi":
+      return <Search className="w-4 h-4" />;
+    case "website_scraper":
+      return <Globe className="w-4 h-4" />;
+    case "google_maps_deep_scraper":
+      return <Navigation className="w-4 h-4" />;
     default:
       return <Settings className="w-4 h-4" />;
   }
@@ -142,6 +149,12 @@ const getNodeColor = (nodeType: string) => {
       return "bg-sky-600";
     case "teams":
       return "bg-indigo-600";
+    case "serpapi":
+      return "bg-indigo-500";
+    case "website_scraper":
+      return "bg-sky-400";
+    case "google_maps_deep_scraper":
+      return "bg-rose-500";
     default:
       return "bg-gray-500";
   }
@@ -194,6 +207,9 @@ const defaultConfigs: Record<string, Record<string, any>> = {
   telegram: { botToken: "", chatId: "", message: "Hello from Workflow!" },
   twitter: { apiKey: "", apiSecret: "", text: "Hello world!" },
   teams: { webhookUrl: "", message: "Hello from Workflow!" },
+  serpapi: { query: "", engine: "google", apiKey: "", location: "", num: 10 },
+  website_scraper: { url: "" },
+  google_maps_deep_scraper: { query: "", limit: 5, max_scrolls: 10, headless: true },
 };
 
 /* ------------------------------------------------------------
@@ -542,42 +558,65 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       } else if (data.nodeType === "ai") {
         // The backend AIService uses Google Generative AI (Gemini).
         models = [
+          "gemini-2.5-flash",
+          "gemini-2.5-pro",
+          "gemini-2.5-flash-lite",
           "gemini-2.0-flash",
-          "gemini-2.0-flash-lite-preview-02-05",
-          "gemini-1.5-flash",
+          "gemini-2.0-flash-001",
+          "gemini-2.0-flash-lite",
+          "gemini-2.0-flash-lite-001",
           "gemini-1.5-pro",
-          "gemini-pro",
-          "gemini-2.5-flash"
+          "gemini-1.5-flash",
+          "gemini-1.5-flash-8b"
         ];
       }
+
+      const isThinkingSupported = value.includes("pro") || value.includes("2.5") || value.includes("thinking");
 
       return (
         <div key={key} className="mb-2">
           <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
             Model
           </label>
-          <div className="flex space-x-1">
-            <select
-              value={models.includes(value) ? value : "custom"}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val !== "custom") handleConfigUpdate(key, val);
-              }}
-              className="flex-1 px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
-            >
-              {models.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-              <option value="custom">Custom...</option>
-            </select>
-            {(!models.includes(value) || value === "custom") && (
-              <input
-                type="text"
-                value={value || ""}
-                onChange={(e) => handleConfigUpdate(key, e.target.value)}
-                placeholder="Custom model..."
-                className="flex-1 px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:outline-none nodrag"
-              />
+          <div className="flex flex-col gap-2">
+            <div className="flex space-x-1">
+              <select
+                value={models.includes(value) ? value : "custom"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== "custom") handleConfigUpdate(key, val);
+                }}
+                className="flex-1 px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
+              >
+                {models.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+                <option value="custom">Custom...</option>
+              </select>
+              {(!models.includes(value) || value === "custom") && (
+                <input
+                  type="text"
+                  value={value || ""}
+                  onChange={(e) => handleConfigUpdate(key, e.target.value)}
+                  placeholder="Custom model..."
+                  className="flex-1 px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:outline-none nodrag"
+                />
+              )}
+            </div>
+
+            {isThinkingSupported && (
+              <div className="flex items-center justify-between p-2 bg-[#0B0E14]/50 border border-gray-800 rounded">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-medium text-gray-300">Reasoning Mode (Thinking)</span>
+                  <span className="text-[9px] text-gray-500 italic">Increases accuracy for complex tasks</span>
+                </div>
+                <div
+                  className={`w-8 h-4 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer transition-colors ${tempConfig.thinking ? 'bg-indigo-500' : ''}`}
+                  onClick={() => handleConfigUpdate("thinking", !tempConfig.thinking)}
+                >
+                  <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${tempConfig.thinking ? 'translate-x-3' : 'translate-x-0'}`}></div>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -708,6 +747,49 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       }
     }
 
+    // 7. SerpApi Engine Selector
+    if (key === "engine" && data.nodeType === "serpapi") {
+      const engines = [
+        "google", "google_maps", "google_news", "google_scholar",
+        "google_videos", "google_shopping", "google_images",
+        "bing", "yahoo", "yandex", "duckduckgo", "naver", "baidu"
+      ];
+
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
+            Search Engine
+          </label>
+          <select
+            value={value || "google"}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
+          >
+            {engines.map(eng => (
+              <option key={eng} value={eng}>{eng.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    // 8. Boolean Toggle
+    if (typeof value === "boolean") {
+      return (
+        <div key={key} className="mb-2 flex items-center justify-between">
+          <label className="block text-xs font-medium text-gray-300 capitalize">
+            {key.replace(/([A-Z])/g, " $1").trim()}
+          </label>
+          <div
+            className={`w-8 h-4 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer transition-colors ${value ? 'bg-indigo-500' : 'bg-gray-600'}`}
+            onClick={() => handleConfigUpdate(key, !value)}
+          >
+            <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${value ? 'translate-x-3' : 'translate-x-0'}`}></div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div key={key} className="mb-2">
         <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
@@ -738,7 +820,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
         transform transition-all duration-300 ease-in-out hover:scale-[1.02]
         ${data.lastRun?.status === 'error' ? "border-red-500 shadow-red-900/20" :
           data.lastRun?.status === 'success' ? "border-green-500 shadow-green-900/20" :
-            data.lastRun?.status === 'RUNNING' ? "border-yellow-500 shadow-yellow-900/20 animate-pulse" :
+            data.lastRun?.status === 'RUNNING' ? "border-blue-500 animate-run-glow animate-scanning shadow-blue-900/40" :
               selected ? "border-[#3D5CFF] shadow-blue-900/20" : "border-gray-800 hover:border-gray-700"
         }
         ${isConfigOpen ? "shadow-xl" : ""}
@@ -819,133 +901,133 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
 
       {/* Configuration Panel - Full Screen Modal */}
       {isConfigOpen && typeof document !== 'undefined' && createPortal(
-        <div 
-            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 nodrag"
-            onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', margin: 0, padding: 0 }}
+        <div
+          className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 nodrag"
+          onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', margin: 0, padding: 0 }}
         >
-          <div 
-              className="flex flex-col bg-[#0B0E14] border border-gray-700/50 rounded-xl shadow-2xl text-white overflow-hidden transform transition-all"
-              style={{ width: '95vw', height: '95vh', maxWidth: 'none', margin: 'auto' }}
-              onClick={(e) => e.stopPropagation()}
+          <div
+            className="flex flex-col bg-[#0B0E14] border border-gray-700/50 rounded-xl shadow-2xl text-white overflow-hidden transform transition-all"
+            style={{ width: '95vw', height: '95vh', maxWidth: 'none', margin: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#151C2F]">
-               <div className="flex items-center space-x-3">
-                 <div className={`${getNodeColor(data.nodeType)} p-2 rounded-full text-white`}>
-                   {getNodeIcon(data.nodeType)}
-                 </div>
-                 <h2 className="text-xl font-semibold text-white">Configuration: {data.label}</h2>
-               </div>
-               <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center justify-center" title="Close">
-                  <X className="w-6 h-6 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded" />
-               </button>
+              <div className="flex items-center space-x-3">
+                <div className={`${getNodeColor(data.nodeType)} p-2 rounded-full text-white`}>
+                  {getNodeIcon(data.nodeType)}
+                </div>
+                <h2 className="text-xl font-semibold text-white">Configuration: {data.label}</h2>
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center justify-center" title="Close">
+                <X className="w-6 h-6 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded" />
+              </button>
             </div>
-            
+
             {/* Body */}
             <div className="flex-1 overflow-auto p-6 md:p-10 bg-[#0B0E14]">
               <div className="max-w-4xl mx-auto space-y-8">
                 <div className="bg-[#151C2F] p-6 rounded-lg border border-gray-800 space-y-6">
                   <h3 className="text-lg font-medium text-white mb-4 border-b border-gray-800 pb-2">Core Settings</h3>
                   <div className="space-y-4">
-              {/* Webhook Special UI */}
-              {data.nodeType === "webhook" && (
-                <div className="mb-4 bg-gray-800/30 p-3 rounded border border-gray-700/50">
-                  <div className="flex items-center justify-between mb-3 p-2 bg-[#0B0E14] rounded border border-gray-800">
-                    <span className="text-gray-300 font-medium text-xs">Active</span>
-                    <div
-                      className={`w-8 h-4 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer transition-colors ${data.config?.active !== false ? 'bg-green-500' : ''}`}
-                      onClick={() => {
-                        const isActive = data.config?.active !== false;
-                        handleConfigUpdate("active", !isActive);
-                      }}
+                    {/* Webhook Special UI */}
+                    {data.nodeType === "webhook" && (
+                      <div className="mb-4 bg-gray-800/30 p-3 rounded border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-3 p-2 bg-[#0B0E14] rounded border border-gray-800">
+                          <span className="text-gray-300 font-medium text-xs">Active</span>
+                          <div
+                            className={`w-8 h-4 flex items-center bg-gray-700 rounded-full p-1 cursor-pointer transition-colors ${data.config?.active !== false ? 'bg-green-500' : ''}`}
+                            onClick={() => {
+                              const isActive = data.config?.active !== false;
+                              handleConfigUpdate("active", !isActive);
+                            }}
+                          >
+                            <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${data.config?.active !== false ? 'translate-x-3' : 'translate-x-0'}`}></div>
+                          </div>
+                        </div>
+
+                        <div className="mb-2">
+                          <label className="block text-xs font-semibold text-gray-300 mb-1">Webhook URL</label>
+                          <div className="flex items-center space-x-2">
+                            <code className="flex-1 p-2 bg-black/50 border border-gray-700 rounded text-[10px] text-blue-300 font-mono break-all leading-tight">
+                              {data.workflowId
+                                ? `http://localhost:4000/hooks/${data.workflowId}`
+                                : "Save workflow to generate URL"}
+                            </code>
+                            <button
+                              onClick={() => {
+                                if (data.workflowId) {
+                                  navigator.clipboard.writeText(`http://localhost:4000/hooks/${data.workflowId}`);
+                                  alert("URL Copied!");
+                                }
+                              }}
+                              className="p-2 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 transition-colors text-white"
+                              title="Copy URL"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <label className="text-xs font-medium text-gray-300">Active Status</label>
+                    <button
+                      onClick={() => handleConfigUpdate("active", !(tempConfig.active ?? true))}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(tempConfig.active ?? true) ? 'bg-green-500' : 'bg-gray-600'
+                        }`}
                     >
-                      <div className={`w-3 h-3 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${data.config?.active !== false ? 'translate-x-3' : 'translate-x-0'}`}></div>
-                    </div>
+                      <span
+                        className={`${(tempConfig.active ?? true) ? 'translate-x-5' : 'translate-x-1'
+                          } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
+                      />
+                    </button>
                   </div>
 
-                  <div className="mb-2">
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Webhook URL</label>
-                    <div className="flex items-center space-x-2">
-                      <code className="flex-1 p-2 bg-black/50 border border-gray-700 rounded text-[10px] text-blue-300 font-mono break-all leading-tight">
-                        {data.workflowId
-                          ? `http://localhost:4000/hooks/${data.workflowId}`
-                          : "Save workflow to generate URL"}
-                      </code>
-                      <button
-                        onClick={() => {
-                          if (data.workflowId) {
-                            navigator.clipboard.writeText(`http://localhost:4000/hooks/${data.workflowId}`);
-                            alert("URL Copied!");
-                          }
-                        }}
-                        className="p-2 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 transition-colors text-white"
-                        title="Copy URL"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
+                  {/* Last Payload */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1 flex justify-between">
+                      <span>Last Payload</span>
+                      <span className="text-[9px] font-normal text-gray-500 uppercase">Input Data</span>
+                    </label>
+                    {data.lastRun?.input ? (
+                      <pre className="bg-black/80 p-2 rounded border border-gray-700 text-[9px] text-green-400 font-mono overflow-auto max-h-32 scrollbar-thin scrollbar-thumb-gray-700">
+                        {JSON.stringify(data.lastRun.input, null, 2)}
+                      </pre>
+                    ) : (
+                      <div className="text-[10px] text-gray-500 italic p-2 border border-dashed border-gray-700 rounded bg-black/20 text-center">
+                        Waiting for data...
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-              <label className="text-xs font-medium text-gray-300">Active Status</label>
-              <button
-                onClick={() => handleConfigUpdate("active", !(tempConfig.active ?? true))}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${(tempConfig.active ?? true) ? 'bg-green-500' : 'bg-gray-600'
-                  }`}
-              >
-                <span
-                  className={`${(tempConfig.active ?? true) ? 'translate-x-5' : 'translate-x-1'
-                    } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
-                />
-              </button>
-            </div>
 
-            {/* Last Payload */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-300 mb-1 flex justify-between">
-                <span>Last Payload</span>
-                <span className="text-[9px] font-normal text-gray-500 uppercase">Input Data</span>
-              </label>
-              {data.lastRun?.input ? (
-                <pre className="bg-black/80 p-2 rounded border border-gray-700 text-[9px] text-green-400 font-mono overflow-auto max-h-32 scrollbar-thin scrollbar-thumb-gray-700">
-                  {JSON.stringify(data.lastRun.input, null, 2)}
-                </pre>
-              ) : (
-                <div className="text-[10px] text-gray-500 italic p-2 border border-dashed border-gray-700 rounded bg-black/20 text-center">
-                  Waiting for data...
-                </div>
-              )}
-            </div>
+                  {Object.entries(defaultConfigs[data.nodeType] ?? tempConfig).map(
+                    ([key, value]) => {
+                      if (data.nodeType === "webhook" && ["active", "payload"].includes(key)) return null;
+                      return renderConfigInput(key, tempConfig[key] ?? value);
+                    }
+                  )}
 
-            {Object.entries(defaultConfigs[data.nodeType] ?? tempConfig).map(
-              ([key, value]) => {
-                if (data.nodeType === "webhook" && ["active", "payload"].includes(key)) return null;
-                return renderConfigInput(key, tempConfig[key] ?? value);
-              }
-            )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const newKey = prompt("Enter configuration key:");
-                if (newKey && !tempConfig[newKey]) {
-                  handleConfigUpdate(newKey, "");
-                }
-              }}
-              className="w-full py-3 text-sm font-medium text-[#3D5CFF] border-2 border-dashed border-[#3D5CFF]/30 rounded-lg hover:bg-[#3D5CFF]/10 transition-colors duration-200 mt-6"
-            >
-              + Add Configuration
-            </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newKey = prompt("Enter configuration key:");
+                      if (newKey && !tempConfig[newKey]) {
+                        handleConfigUpdate(newKey, "");
+                      }
+                    }}
+                    className="w-full py-3 text-sm font-medium text-[#3D5CFF] border-2 border-dashed border-[#3D5CFF]/30 rounded-lg hover:bg-[#3D5CFF]/10 transition-colors duration-200 mt-6"
+                  >
+                    + Add Configuration
+                  </button>
                 </div>
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="p-4 border-t border-gray-800 bg-[#151C2F] flex justify-end">
-               <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="px-6 py-2 bg-[#3D5CFF] text-white rounded hover:bg-blue-600 transition-colors">
-                  Done
-               </button>
+              <button onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }} className="px-6 py-2 bg-[#3D5CFF] text-white rounded hover:bg-blue-600 transition-colors">
+                Done
+              </button>
             </div>
           </div>
         </div>,

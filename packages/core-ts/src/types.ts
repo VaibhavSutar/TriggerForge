@@ -18,6 +18,7 @@ export interface WorkflowContext {
   }[];
   services?: Record<string, any>; // [NEW] Dependency injection
   nodeLabels?: Record<string, string>; // [NEW] Map ID -> Label
+  item?: any; // [NEW] Current processing item (for loops)
 }
 
 /* ----------------------------------
@@ -69,6 +70,7 @@ export interface WorkflowNode {
 ----------------------------------- */
 export interface ConnectorContext {
   input: any;
+  item?: any; // [NEW] Added for loop iteration context
   state: Record<string, any>;
   logs: WorkflowLog[];
   services?: Record<string, any>; // [NEW] Access to services

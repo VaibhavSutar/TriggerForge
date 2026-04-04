@@ -24,6 +24,7 @@ import { NodeSidebar } from "@/components/workflow/NodeSidebar";
 import { ExecutionHistory } from "@/components/workflow/ExecutionHistory";
 import type { ConnectorManifest } from "@/app/types/workflow";
 import { LOCAL_STORAGE_KEYS } from "@/config/constants";
+import { WorkflowAssistant } from "@/components/workflow/WorkflowAssistant";
 
 const nodeTypes: NodeTypes = { workflowNode: WorkflowNode };
 const initialNodes: Node[] = [];
@@ -71,6 +72,28 @@ export default function WorkflowEditor({
   const [showRunPanel, setShowRunPanel] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [executionId, setExecutionId] = useState<string | null>(null);
+
+  // Add state for assistant
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [connectors, setConnectors] = useState<ConnectorManifest[]>([]);
+  const [isLoadingConnectors, setIsLoadingConnectors] = useState(false);
+
+  // Fetch connectors for AI RAG
+  useEffect(() => {
+    setIsLoadingConnectors(true);
+    fetch("/api/connectors")
+      .then(res => res.json())
+      .then(data => {
+        if (data.items) {
+          setConnectors(data.items.map((c: any) => ({
+            id: c.id,
+            title: c.name || c.id,
+            kind: c.type || "action"
+          })));
+        }
+      })
+      .finally(() => setIsLoadingConnectors(false));
+  }, []);
 
   // Add state for report
   const [showReportPanel, setShowReportPanel] = useState(false);
@@ -257,36 +280,46 @@ export default function WorkflowEditor({
     if (!logs.length) return;
 
     const nodeRunData: Record<string, { input?: any; output?: any; status?: 'success' | 'error' | 'RUNNING' }> = {};
-    const nodeMap = new Map(nodes.map(n => [n.id, n.data.label]));
-    const newLogLines: string[] = [];
+    const labelMap = new Map(nodes.map(n => [n.id, n.data.label]));
+    const newLogLines: string[] = ["▶️ [System] Starting workflow..."];
 
     logs.forEach((l: any) => {
       if (!nodeRunData[l.nodeId]) nodeRunData[l.nodeId] = { status: 'success' };
 
+      const timestamp = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const label = labelMap.get(l.nodeId) || l.nodeId;
+      let statusIcon = "ℹ️";
+      let logColor = "text-gray-300";
+
       if (l.message === "Execution started") {
         nodeRunData[l.nodeId].status = 'RUNNING';
-        // Only update input if present
+        statusIcon = "⚡";
+        logColor = "text-blue-400";
         if (l.data !== undefined) nodeRunData[l.nodeId].input = l.data;
       } else if (l.message === "Execution completed") {
         nodeRunData[l.nodeId].status = 'success';
+        statusIcon = "✅";
+        logColor = "text-green-400";
         if (l.data !== undefined) nodeRunData[l.nodeId].output = l.data;
-      } else if (l.message === "Execution failed") {
+      } else if (l.message === "Execution failed" || l.message === "Execution crashed") {
         nodeRunData[l.nodeId].status = 'error';
+        statusIcon = "❌";
+        logColor = "text-red-400";
         nodeRunData[l.nodeId].output = l.data;
       }
 
-      const label = nodeMap.get(l.nodeId) || l.nodeId;
-      const statusIcon = l.message === "Execution failed" ? "❌" : l.message === "Execution completed" ? "✅" : l.message === "Execution started" ? "▶️" : "ℹ️";
-      let logMsg = `${statusIcon} [${label}] ${l.message}`;
-      if (l.message === "Execution failed" && l.data) {
+      let logMsg = `[${timestamp}] ${statusIcon} [${label}] ${l.message}`;
+      if ((l.message === "Execution failed" || l.message === "Execution crashed") && l.data) {
         const errMsg = typeof l.data === 'string' ? l.data : (l.data.message || JSON.stringify(l.data));
         logMsg += `: ${errMsg}`;
       }
       newLogLines.push(logMsg);
     });
 
-    if (execution.status === 'SUCCEEDED' || execution.status === 'FAILED') {
-      newLogLines.push(`🏁 Workflow ${execution.status.toLowerCase()}`);
+    if (execution.status === 'SUCCEEDED') {
+      newLogLines.push(`🏁 Workflow completed successfully at ${new Date().toLocaleTimeString()}`);
+    } else if (execution.status === 'FAILED') {
+      newLogLines.push(`🛑 Workflow failed at ${new Date().toLocaleTimeString()}`);
     }
 
     setRunLogs(newLogLines);
@@ -381,21 +414,8 @@ export default function WorkflowEditor({
     // The backend might finish fast, returning payload. 
     // We can use it for final consistency check.
     const data = await r.json();
-    if (data.result?.context) {
-      // Just in case polling missed it (very fast execution)
-      // But polling should eventually catch it or we stop polling if isRunning is set to false here?
-      // Let's NOT set isRunning false here immediately if we rely on polling? 
-      // Actually, if we get data here, it IS done.
-
-      // Let's guarantee the final update
-      // We need to shape it like the execution object for processExecutionUpdate
-      const fakeExec = {
-        status: data.success ? 'SUCCEEDED' : 'FAILED',
-        logs: data.result.context.logs,
-        output: data.result.context.nodeResults
-      };
-      processExecutionUpdate(fakeExec);
-      setIsRunning(false);
+    if (data.executionId) {
+      setExecutionId(data.executionId);
     }
 
   }, [workflowId, userId, saveWorkflow, processExecutionUpdate]);
@@ -468,6 +488,15 @@ export default function WorkflowEditor({
           onRun={runWorkflow}
           onExport={handleExport}
           onImport={handleImport}
+          onToggleAssistant={() => setIsAssistantOpen(!isAssistantOpen)}
+          isAssistantOpen={isAssistantOpen}
+        />
+
+        <WorkflowAssistant
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          onAddTemplate={addTemplate}
+          connectors={connectors}
         />
 
         <div className="absolute top-4 right-4 z-10 flex gap-2">

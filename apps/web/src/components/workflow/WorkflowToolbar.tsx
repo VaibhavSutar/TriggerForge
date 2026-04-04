@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, Save, Play, Settings, Download, Upload, Edit2, Check, X, Home } from 'lucide-react';
+import { Plus, Save, Play, Settings, Download, Upload, Edit2, Check, X, Home, Sparkles } from 'lucide-react';
 import { useRouter } from "next/navigation";
+
 interface WorkflowToolbarProps {
   workflowName: string;
   onSave: () => void;
@@ -11,8 +12,9 @@ interface WorkflowToolbarProps {
   onRun?: () => void;
   onImport?: () => void;
   onExport?: () => void;
+  onToggleAssistant?: () => void;
+  isAssistantOpen?: boolean;
 }
-
 export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = (props) => {
   const {
     workflowName,
@@ -87,6 +89,17 @@ export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = (props) => {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={props.onToggleAssistant}
+            className={`flex items-center space-x-2 px-4 py-2 border rounded-lg transition-all duration-200 transform hover:scale-105 shadow-md ${props.isAssistantOpen
+              ? 'bg-purple-600/20 border-purple-500 text-purple-400'
+              : 'bg-[#151C2F] border-gray-700 text-gray-300 hover:border-purple-500/50 hover:text-purple-400'
+              }`}
+          >
+            <Sparkles className={`w-4 h-4 ${props.isAssistantOpen ? 'animate-pulse' : ''}`} />
+            <span className="text-sm font-medium">Assistant</span>
+          </button>
+
           <button
             onClick={onAddNode}
             className="flex items-center space-x-2 px-4 py-2 bg-[#3D5CFF] text-white rounded-lg hover:bg-blue-600 transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"

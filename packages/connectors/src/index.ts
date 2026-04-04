@@ -27,6 +27,8 @@ import { teamsConnector } from "./connectors/teams.js";
 import { emailConnector } from "./connectors/email.js";
 import { huggingFaceConnector } from "./connectors/huggingFace.js";
 import { fileConnector } from "./connectors/file.js";
+import { websiteScraperConnector } from "./connectors/websiteScraper.js";
+import { googleMapsDeepScraperConnector } from "./connectors/googleMapsScraper.js";
 
 // AI
 import { aiConnector } from "./connectors/ai.js";
@@ -49,7 +51,7 @@ export { startConnector, webhookConnector, cronConnector };
 export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector, loopConnector };
 export { googleGmailConnector, googleDocsConnector, googleSheetsConnector, discordWebhookConnector, slackConnector, twitterConnector, telegramConnector, teamsConnector, emailConnector, huggingFaceConnector, fileConnector };
 export { aiConnector, mcpToolConnector };
-export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector, openAIConnector };
+export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector, openAIConnector, websiteScraperConnector, googleMapsDeepScraperConnector };
 
 // Registry
 const ALL_CONNECTORS: Connector[] = [
@@ -86,7 +88,9 @@ const ALL_CONNECTORS: Connector[] = [
   agentConnector,
   complianceNode,
   serpApiConnector,
-  openAIConnector
+  openAIConnector,
+  websiteScraperConnector,
+  googleMapsDeepScraperConnector
 ];
 
 export function listConnectors(): Connector[] {
