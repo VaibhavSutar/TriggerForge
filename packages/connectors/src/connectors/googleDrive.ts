@@ -81,6 +81,40 @@ export const googleDriveConnector: Connector = {
                         .on('error', (err: any) => reject({ success: false, error: err.message }));
                 });
 
+            } else if (operation === "upload") {
+                const { url, fileName, folderId } = config;
+                if (!url) throw new Error("Missing URL or path for upload");
+
+                let stream: any;
+                let mimeType = "video/mp4";
+
+                if (url.startsWith("http")) {
+                    // Download from URL
+                    const downloadResponse = await fetch(url);
+                    if (!downloadResponse.ok) throw new Error(`Fetch failed: ${downloadResponse.statusText}`);
+                    stream = downloadResponse.body;
+                    mimeType = downloadResponse.headers.get("content-type") || mimeType;
+                } else {
+                    // Local file path
+                    const fs = await import("fs");
+                    if (!fs.existsSync(url)) throw new Error(`File not found: ${url}`);
+                    stream = fs.createReadStream(url);
+                }
+
+                const response = await drive.files.create({
+                    requestBody: {
+                        name: fileName || "Untitled Video.mp4",
+                        parents: folderId ? [folderId] : undefined
+                    },
+                    media: {
+                        mimeType,
+                        body: stream
+                    },
+                    fields: "id, name, webViewLink"
+                });
+
+                ctx.logs.push(`[google_drive] Uploaded file: ${response.data.name} (ID: ${response.data.id})`);
+                return { success: true, output: response.data };
             } else if (operation === "list") {
                 const q = folderId ? `'${folderId}' in parents` : undefined;
                 const response = await drive.files.list({

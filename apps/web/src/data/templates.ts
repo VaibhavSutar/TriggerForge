@@ -429,5 +429,23 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
             { source: "5", target: "6" },
             { source: "5", target: "7" }
         ]
+    },
+    {
+        id: "premium_ai_video_reel",
+        name: "Premium AI Reel Engine",
+        description: "Professional Reel generation: Multi-clip stitching, ElevenLabs neural voices, and built-in yellow captions. No cloud rendering fees.",
+        nodes: [
+            { id: "1", connectorId: "start", label: "Start Production", position: { x: 100, y: 100 }, config: { event: "manual" } },
+            { id: "2", connectorId: "ai", label: "Gen 3 Bulk Scripts", position: { x: 100, y: 250 }, config: { model: "gemini-2.0-flash", prompt: "Create 3 unique, high-impact 20-second reel scripts for a 'Luxury Travel' niche. Return as a JSON object with a 'reels' array. Each object in the array MUST have: 1. 'script' (punchy voiceover text) 2. 'search_query' (highly specific Pexels search term for related travel visuals). Return ONLY raw JSON without markdown code blocks." } },
+            { id: "3", connectorId: "pexels", label: "Fetch Assets (Batch)", position: { x: -100, y: 400 }, config: { query: "{{$node.2.output.reels}}", type: "videos", per_page: 3, orientation: "portrait" } },
+            { id: "4", connectorId: "elevenlabs", label: "Voiceovers (Batch)", position: { x: 300, y: 400 }, config: { apiKey: "YOUR_ELEVENLABS_KEY", voiceId: "pNInz6obpgDQGcFmaJgB", model_id: "eleven_multilingual_v2", text: "{{$node.2.output.reels}}" } },
+            { id: "5", connectorId: "video_renderer_local", label: "Parallel Render Engine", position: { x: 100, y: 550 }, config: { operation: "stitch", videoUrls: "{{$node.3.output}}", audioUrl: "{{$node.4.output}}", text: "{{$node.2.output.reels}}", outputName: "luxury_reel" } }
+        ],
+        edges: [
+            { source: "1", target: "2" },
+            { source: "2", target: "3" },
+            { source: "3", target: "4" },
+            { source: "4", target: "5" }
+        ]
     }
 ];

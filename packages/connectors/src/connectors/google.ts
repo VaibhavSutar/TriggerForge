@@ -39,7 +39,8 @@ export const googleGmailConnector: Connector = {
         if (!auth) {
             // Mock Mode if no auth
             if (operation === "read_emails") {
-                ctx.logs.push(`[google_gmail] Mock fetching unread emails`);
+                const q = config.query || "is:unread";
+                ctx.logs.push(`[google_gmail] Mock fetching emails with query: "${q}"`);
                 return {
                     success: true,
                     output: {
@@ -70,11 +71,13 @@ export const googleGmailConnector: Connector = {
 
         try {
             if (operation === "read_emails") {
-                // Fetch unread emails
+                const q = config.query || "is:unread";
+                ctx.logs.push(`[google_gmail] Fetching emails with query: "${q}"`);
+                
                 const response = await gmail.users.messages.list({
                     userId: 'me',
-                    q: 'is:unread',
-                    maxResults: 10,
+                    q: q,
+                    maxResults: config.maxResults || 10,
                 });
 
                 const messages = response.data.messages || [];
@@ -112,7 +115,7 @@ export const googleGmailConnector: Connector = {
                     }
                 }
 
-                ctx.logs.push(`[google_gmail] Fetched ${emails.length} unread emails`);
+                ctx.logs.push(`[google_gmail] Fetched ${emails.length} emails`);
                 return {
                     success: true,
                     output: { emails }

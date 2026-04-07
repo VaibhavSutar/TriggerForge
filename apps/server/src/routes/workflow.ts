@@ -3,6 +3,40 @@ import { prisma } from "../prisma";
 import { executeWorkflowFromJson } from "@triggerforge/core";
 import type { Workflow as CoreWorkflow } from "@triggerforge/core";
 import { aiService, mcpManager, oauthService, executionService } from "../services";
+import { triggerService } from "../services/trigger.service";
+
+/** Utility: Sync trigger based on workflow JSON */
+function syncTrigger(workflowId: string, json: any) {
+  if (!json || !Array.isArray(json.nodes)) {
+    triggerService.stopTrigger(workflowId);
+    return;
+  }
+
+  const nodes = json.nodes;
+  // 1. Cron Trigger
+  const cronNode = nodes.find((n: any) => n.data?.nodeType === "cron" || n.type === "cron");
+  const isCronActive = cronNode && cronNode.data?.config?.active !== false;
+
+  if (isCronActive) {
+    const expression = cronNode.data?.config?.expression || cronNode.config?.expression;
+    if (expression) {
+      triggerService.registerCron(workflowId, expression, json);
+    }
+  }
+
+  // 2. Polling Trigger (Google Drive)
+  const driveTrigger = nodes.find((n: any) => n.data?.nodeType === "google_drive_trigger" || n.type === "google_drive_trigger");
+  const isDriveActive = driveTrigger && driveTrigger.data?.config?.active !== false;
+
+  if (isDriveActive) {
+    triggerService.registerPollingTrigger(workflowId, "google_drive_trigger", driveTrigger.data?.config || driveTrigger.config);
+  }
+
+  // If none active, stop existing triggers for this workflow
+  if (!isCronActive && !isDriveActive) {
+    triggerService.stopTrigger(workflowId);
+  }
+}
 
 /** Route types */
 type SaveBody = {
@@ -69,6 +103,10 @@ export async function workflowRoutes(app: FastifyInstance) {
           where: { id: existing.id },
           data: { json: { nodes, edges } },
         });
+
+        // Sync Trigger Service
+        syncTrigger(workflow.id, workflow.json);
+
         return reply.send({ ok: true, mode: "updateByName", workflow });
       }
 
@@ -76,6 +114,10 @@ export async function workflowRoutes(app: FastifyInstance) {
       const workflow = await prisma.workflow.create({
         data: { userId, name, json: { nodes, edges } },
       });
+
+      // Sync Trigger Service
+      syncTrigger(workflow.id, workflow.json);
+
       return reply.code(201).send({ ok: true, mode: "create", workflow });
     } catch (error) {
       app.log.error(error);
@@ -112,6 +154,12 @@ export async function workflowRoutes(app: FastifyInstance) {
         if (json) data.json = { ...(exists.json as any), ...json };
 
         const workflow = await prisma.workflow.update({ where: { id }, data });
+
+        // Sync Trigger Service if JSON changed
+        if (json) {
+          syncTrigger(workflow.id, workflow.json);
+        }
+
         return reply.send({ ok: true, workflow });
       } catch (error) {
         app.log.error(error);
@@ -224,6 +272,10 @@ export async function workflowRoutes(app: FastifyInstance) {
             .send({ ok: false, error: "Workflow not found for this user" });
 
         await prisma.workflow.delete({ where: { id } });
+
+        // Stop Trigger Service
+        triggerService.stopTrigger(id);
+
         return reply.send({ ok: true });
       } catch (error) {
         app.log.error(error);

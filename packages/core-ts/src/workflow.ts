@@ -67,23 +67,33 @@ async function executeNode(
   });
 
   try {
+    // Wrap logs array in a proxy to automatically format string logs from connectors
+    const wrappedLogs = new Proxy(context.logs, {
+      get(target, prop, receiver) {
+        if (prop === 'push') {
+          return (...args: any[]) => {
+            const formatted = args.map(arg =>
+              typeof arg === 'string'
+                ? { nodeId: id, message: arg, timestamp: Date.now() }
+                : arg
+            );
+            return target.push(...formatted);
+          };
+        }
+        return Reflect.get(target, prop, receiver);
+      }
+    });
+
     const result: NodeExecutionResult = await connector.run(
       {
         input: currentInput,
         item: context.item,
-        logs: context.logs,
+        logs: wrappedLogs as any,
         services: context.services,
         state: context.state
       },
       resolvedConfig
     );
-
-    // Sanitize logs...
-    for (let i = 0; i < context.logs.length; i++) {
-      if (typeof context.logs[i] === 'string') {
-        context.logs[i] = { nodeId: id, message: context.logs[i] as any, timestamp: Date.now() };
-      }
-    }
 
     if (!result.success) {
       context.logs.push({ nodeId: id, message: "Execution failed", data: result.error, timestamp: Date.now() });
@@ -320,7 +330,26 @@ export async function runWorkflowFromJson(
 ----------------------------------- */
 function resolveExpressions(config: any, view: any): any {
   if (typeof config === "string") {
-    // Check if it looks like a template
+    // 1. Single Expression Detection (e.g. "{{$node.id}}")
+    // If the entire config is ONE expression, we try to return the raw object
+    const match = config.match(/^\{\{\s*([a-zA-Z0-9_$.[\]"'-]+)\s*\}\}$/);
+    if (match) {
+      const path = match[1];
+      try {
+        // Simple manual path resolution (handles dot and limited bracket notation)
+        const parts = path.split(/\.|\[|\]/).filter(p => !!p).map(p => p.replace(/["']/g, ''));
+        let current = view;
+        for (const part of parts) {
+          if (current === undefined || current === null) break;
+          current = current[part];
+        }
+        if (current !== undefined) return current;
+      } catch (err) {
+        // Fallback to Mustache if manual fails
+      }
+    }
+
+    // 2. Normal Template Rendering
     if (config.includes("{{")) {
       try {
         // Pre-process bracket notation like [0] or ["key"] into .0 or .key
@@ -331,10 +360,6 @@ function resolveExpressions(config: any, view: any): any {
         const preprocessed = config.replace(
           /\[["']?([^"'\]]+)["']?\]/g,
           (match, key) => {
-            // If the key is a node ID or label, ensure it's in the local view for easy access
-            if (view.$node && view.$node[key] !== undefined) {
-              // No need for a random ref, just ensuring key is reachable
-            }
             return "." + key;
           }
         );

@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
-import { prisma } from "../index";
+import { prisma } from "../prisma";
+
 
 export async function dbCheckRoute(app: FastifyInstance) {
   app.get("/db-check", async () => {

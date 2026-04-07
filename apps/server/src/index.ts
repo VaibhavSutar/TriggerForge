@@ -16,11 +16,22 @@ import { triggerService } from "./services";
 
 dotenv.config();
 
+import fastifyStatic from "@fastify/static";
+import path from "path";
+import fs from "fs";
+
 const app = Fastify({ logger: true });
 app.register(fastifyCors, { origin: "*" });
 
-// Prisma instance (shared)
-export const prisma = new PrismaClient();
+// Create public/renders dir if it doesn't exist
+const publicDir = path.join(process.cwd(), "public");
+const rendersDir = path.join(publicDir, "renders");
+if (!fs.existsSync(rendersDir)) fs.mkdirSync(rendersDir, { recursive: true });
+
+app.register(fastifyStatic, {
+  root: publicDir,
+  prefix: "/public/",
+});
 
 // Routes
 app.get("/", async (request, reply) => {

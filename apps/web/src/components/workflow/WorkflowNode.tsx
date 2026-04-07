@@ -15,7 +15,7 @@ export const getUserId = () => {
 
 import React, { memo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Handle, Position, NodeProps } from "reactflow";
+import { Handle, Position, NodeProps, useReactFlow } from "reactflow";
 import {
   Settings,
   Trash2,
@@ -48,9 +48,169 @@ import {
   Zap,
   Users,
   Brain,
-  Navigation
+  Navigation,
+  Power,
+  Download
 } from "lucide-react";
 import { DataInspector } from "./DataInspector";
+
+/* ------------------------------------------------------------
+ * 🔍 VARIABLE PICKER HELPERS
+ * ------------------------------------------------------------ */
+const getFieldsForNode = (node: any) => {
+  const type = node.data?.nodeType;
+  const op = node.data?.config?.operation;
+
+  const common = [
+    { label: "Full Output", path: "output" },
+  ];
+
+  switch (type) {
+    case "google_gmail":
+      if (op === "read_emails") {
+        return [
+          { label: "Email Subject", path: "output.subject" },
+          { label: "Sender (From)", path: "output.from" },
+          { label: "Message Body", path: "output.body" },
+          { label: "Message ID", path: "output.id" },
+          ...common
+        ];
+      }
+      return common;
+    case "ai":
+      return [
+        { label: "Generated Text", path: "output.text" },
+        { label: "Detected Tags (v1)", path: "output.tags" },
+        { label: "Detected Tags (v2)", path: "output.text.tags" },
+        ...common
+      ];
+    case "webhook":
+      return [
+        { label: "Request Body", path: "output.body" },
+        { label: "Query Parms", path: "output.query" },
+        ...common
+      ];
+    case "cron":
+      return [
+        { label: "Trigger Time", path: "output.timestamp" },
+        ...common
+      ];
+    case "google_sheets":
+      return [
+        { label: "Sheet Rows", path: "output.values" },
+        ...common
+      ];
+    case "pexels":
+      return [
+        { label: "Asset URL", path: "output.link" },
+        { label: "Detailed Metadata", path: "output.asset" },
+        ...common
+      ];
+    case "shotstack":
+      return [
+        { label: "Final Video URL", path: "output.url" },
+        { label: "Render ID", path: "output.renderId" },
+        { label: "Status", path: "output.status" },
+        ...common
+      ];
+    case "tts":
+      return [
+        { label: "Audio URL", path: "output.audioUrl" },
+        ...common
+      ];
+    case "video_renderer_local":
+      return [
+        { label: "Public Video URL", path: "output.url" },
+        { label: "Local Output Path", path: "output.localPath" },
+        { label: "Status", path: "output.status" },
+        ...common
+      ];
+    case "elevenlabs":
+      return [
+        { label: "Audio URL", path: "output.audioUrl" },
+        { label: "Local Path", path: "output.localPath" },
+        ...common
+      ];
+    case "google_drive":
+      return [
+        { label: "WebView Link", path: "output.webViewLink" },
+        { label: "File ID", path: "output.id" },
+        ...common
+      ];
+    default:
+      return common;
+  }
+};
+
+const VariablePicker = ({ onSelect, currentNodeId }: { onSelect: (val: string) => void, currentNodeId: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { getNodes } = useReactFlow();
+
+  // Sort by Y position to show "earlier" nodes first
+  const nodes = getNodes()
+    .filter(n => n.id !== currentNodeId)
+    .sort((a, b) => a.position.y - b.position.y);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        className="p-1 px-1.5 text-indigo-400 hover:bg-indigo-500/10 rounded border border-indigo-500/30 transition-colors flex items-center space-x-1"
+        title="Insert Variable"
+      >
+        <Database className="w-3 h-3" />
+        <span className="text-[9px] font-black tracking-widest">DATA</span>
+      </button>
+
+      {isOpen && (
+        <div className="fixed sm:absolute z-100001 mt-1 right-0 w-72 bg-[#0B0E14] border border-gray-700/50 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-3 border-b border-gray-800 bg-[#151C2F] flex items-center space-x-2">
+            <Search className="w-4 h-4 text-indigo-500" />
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search variables..."
+              className="bg-transparent border-none text-xs text-white placeholder-gray-600 focus:outline-none w-full"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="max-h-72 overflow-y-auto p-2 custom-scrollbar space-y-3">
+            {nodes.length === 0 && <div className="p-4 text-xs text-gray-500 text-center italic">No upstream data available</div>}
+            {nodes.filter(n => n.data?.label?.toLowerCase().includes(search.toLowerCase()) || n.data?.nodeType?.includes(search)).map(node => {
+              const fields = getFieldsForNode(node);
+              return (
+                <div key={node.id} className="bg-[#151C2F]/50 rounded-lg p-1 border border-gray-800/50">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-indigo-400 flex items-center justify-between">
+                    <span className="truncate max-w-[140px]">{node.data?.label || node.id}</span>
+                    <span className="text-[8px] text-gray-600 font-mono">{node.data?.nodeType}</span>
+                  </div>
+                  <div className="mt-1 space-y-0.5">
+                    {fields.map(v => (
+                      <button
+                        key={v.path}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(`{{$node.${node.id}.${v.path}}}`);
+                          setIsOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-[11px] text-gray-400 hover:bg-indigo-500 hover:text-white rounded-md transition-all flex justify-between items-center group"
+                      >
+                        <span>{v.label}</span>
+                        <span className="text-[8px] opacity-0 group-hover:opacity-50 font-mono">{v.path}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /* ------------------------------------------------------------
  * 🔹 ICON + COLOR HELPERS
@@ -104,6 +264,18 @@ const getNodeIcon = (nodeType: string) => {
       return <Globe className="w-4 h-4" />;
     case "google_maps_deep_scraper":
       return <Navigation className="w-4 h-4" />;
+    case "pexels":
+      return <Search className="w-4 h-4" />;
+    case "shotstack":
+      return <Monitor className="w-4 h-4" />;
+    case "video_renderer_local":
+      return <Monitor className="w-4 h-4" />;
+    case "elevenlabs":
+      return <MessageSquare className="w-4 h-4" />;
+    case "tts":
+      return <MessageSquare className="w-4 h-4" />;
+    case "google_drive":
+      return <Layout className="w-4 h-4" />;
     default:
       return <Settings className="w-4 h-4" />;
   }
@@ -155,6 +327,18 @@ const getNodeColor = (nodeType: string) => {
       return "bg-sky-400";
     case "google_maps_deep_scraper":
       return "bg-rose-500";
+    case "pexels":
+      return "bg-green-400";
+    case "shotstack":
+      return "bg-indigo-600";
+    case "video_renderer_local":
+      return "bg-slate-700";
+    case "elevenlabs":
+      return "bg-indigo-500";
+    case "tts":
+      return "bg-sky-400";
+    case "google_drive":
+      return "bg-blue-600";
     default:
       return "bg-gray-500";
   }
@@ -199,7 +383,17 @@ const defaultConfigs: Record<string, Record<string, any>> = {
     apiKey: ""
   },
   mcp_tool: { serverName: "filesystem", toolName: "read_file", args: { path: "/tmp/test" }, instructions: "", context: "" },
-  google_gmail: { credential: "", to: "", subject: "", body: "" },
+  google_gmail: {
+    credential: "",
+    operation: "send_email",
+    to: "",
+    subject: "",
+    body: "",
+    query: "is:unread",
+    messageId: "",
+    addLabels: "",
+    removeLabels: ""
+  },
   google_sheets: { credential: "", operation: "read_sheet", spreadsheetId: "", range: "Sheet1!A1:B10", values: "" },
   google_docs: { credential: "", operation: "read_text", documentId: "", content: "" },
   hugging_face: { apiKey: "", model: "meta-llama/Llama-3.2-1B-Instruct", inputs: "Translate English to French: Hello", parameters: "{}" },
@@ -210,6 +404,12 @@ const defaultConfigs: Record<string, Record<string, any>> = {
   serpapi: { query: "", engine: "google", apiKey: "", location: "", num: 10 },
   website_scraper: { url: "" },
   google_maps_deep_scraper: { query: "", limit: 5, max_scrolls: 10, headless: true },
+  pexels: { apiKey: "", query: "sports", type: "videos", per_page: 3, orientation: "portrait" },
+  shotstack: { apiKey: "", env: "sandbox", waitForCompletion: true, timeline: { tracks: [{ clips: [] }] } },
+  video_renderer_local: { operation: "stitch", videoUrls: [], audioUrl: "", text: "", outputName: "reel.mp4" },
+  elevenlabs: { apiKey: "", voiceId: "21m00Tcm4TlvDq8ikWAM", model_id: "eleven_multilingual_v2", text: "Hello from ElevenLabs!", stability: 0.5, similarity_boost: 0.75 },
+  tts: { text: "Hello", lang: "en" },
+  google_drive: { operation: "upload", url: "", fileName: "video.mp4" }
 };
 
 /* ------------------------------------------------------------
@@ -296,7 +496,6 @@ const FileSelector = ({
  * 🔹 COMPONENT
  * ------------------------------------------------------------ */
 
-// 🔹 COMPONENT
 export const CRON_PRESETS: Record<string, string> = {
   "Every Minute": "* * * * *",
   "Every 5 Minutes": "*/5 * * * *",
@@ -305,6 +504,88 @@ export const CRON_PRESETS: Record<string, string> = {
   "Every Day (Midnight)": "0 0 * * *",
   "Every Week (Sunday)": "0 0 * * 0",
   "Custom": "custom"
+};
+
+const ResultPreview = ({ output }: { output: any }) => {
+  if (!output) return null;
+  
+  const renderItem = (item: any, isBatch = false) => {
+    const url = item.url || item.link || item.audioUrl;
+    if (!url || typeof url !== 'string' || url.includes('{{')) return null;
+
+    const isVideo = url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('video');
+    const isAudio = url.endsWith('.mp3') || url.endsWith('.wav') || url.includes('audio');
+    const isImage = url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') || url.includes('image');
+
+    return (
+      <div key={url} className={`${isBatch ? "mb-1" : "mt-3"} p-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300 nodrag`}>
+        <div className="flex items-center justify-between mb-2">
+          {!isBatch && <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Generated Output</span>}
+          <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-1 px-2 bg-indigo-500 text-white rounded text-[9px] font-bold hover:bg-indigo-600 transition-colors flex items-center space-x-1 ml-auto"
+          >
+            <Globe className="w-2.5 h-2.5" />
+            <span>OPEN</span>
+          </a>
+        </div>
+        
+        {isVideo && (
+          <div className="relative group cursor-pointer overflow-hidden rounded-md border border-gray-800 bg-black aspect-video flex items-center justify-center min-h-[40px]">
+             <video src={url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" muted loop onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
+             <div className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Play className={`${isBatch ? "w-4 h-4" : "w-6 h-6"} text-white drop-shadow-lg`} />
+             </div>
+          </div>
+        )}
+
+        {isImage && (
+          <div className="rounded-md border border-gray-800 overflow-hidden bg-black aspect-video">
+             <img src={url} className="w-full h-full object-contain" alt="Preview" />
+          </div>
+        )}
+
+        {isAudio && (
+          <div className="flex items-center space-x-2 p-1 bg-black/40 rounded border border-gray-800">
+             <MessageSquare className="w-3 h-3 text-indigo-400" />
+             <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div className="w-1/3 h-full bg-indigo-500 animate-pulse" />
+             </div>
+             <a href={url} download className="p-1 text-gray-400 hover:text-white">
+                <Download className="w-2.5 h-2.5" />
+             </a>
+          </div>
+        )}
+
+        <div className="mt-2 text-[8px] text-gray-500 truncate font-mono bg-black/20 p-1 rounded">
+          {url}
+        </div>
+      </div>
+    );
+  };
+
+  const outputArr = Array.isArray(output) ? output : null;
+  if (!outputArr && (output.url || output.link || output.audioUrl)) {
+    return renderItem(output);
+  }
+
+  if (outputArr) {
+    return (
+      <div className="mt-3 space-y-2">
+        <div className="px-1 flex justify-between items-center bg-indigo-500/20 p-1 rounded border border-indigo-500/30">
+           <span className="text-[10px] font-black text-indigo-400 uppercase">Batch Success ({outputArr.length})</span>
+           <Zap className="w-3 h-3 text-indigo-500 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+          {outputArr.map(item => renderItem(item, true))}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
@@ -316,13 +597,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     ...data.config,
   });
 
-  // State for Inspector
   const [inspectorData, setInspectorData] = useState<{ input: any; output: any } | null>(null);
   const [showInspector, setShowInspector] = useState(false);
 
-  /* -----------------------------------
-   * 🧩 Name Editing
-   * ----------------------------------- */
   const handleNameSave = () => {
     if (data.onUpdate) data.onUpdate(id, { label: tempName });
     setIsEditingName(false);
@@ -333,18 +610,12 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     setIsEditingName(false);
   };
 
-  /* -----------------------------------
-   * ⚙️ Config Editing
-   * ----------------------------------- */
   const handleConfigUpdate = (key: string, value: any) => {
     const newConfig = { ...tempConfig, [key]: value };
     setTempConfig(newConfig);
     if (data.onUpdate) data.onUpdate(id, { config: newConfig });
   };
 
-  /* -----------------------------------
-   * ⚡ Run Handler
-   * ----------------------------------- */
   const handleRun = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     const btn = e.currentTarget;
@@ -367,10 +638,9 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
 
       setInspectorData({
         input: json.input || tempConfig,
-        output: json.output || json // Fallback if output key missing
+        output: json.output || json
       });
       setShowInspector(true);
-      // Also open config if it was closed, so we can see the result panel
       if (!isConfigOpen) setIsConfigOpen(true);
 
     } catch (err: any) {
@@ -381,17 +651,19 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     }
   };
 
-  /* -----------------------------------
-   * 🔧 Config Field Renderer
-   * ----------------------------------- */
   const renderConfigInput = (key: string, value: any) => {
-    // Hide sensitive passwords
     if (key.toLowerCase().includes("password") || key.toLowerCase().includes("apikey") || key.toLowerCase().includes("api_key") || key.toLowerCase().includes("token")) {
       return (
         <div key={key} className="mb-2">
-          <label className="block text-xs font-medium text-gray-300 mb-1">
-            {key}
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-gray-300 capitalize">
+              {key}
+            </label>
+            <VariablePicker
+              currentNodeId={id}
+              onSelect={(val) => handleConfigUpdate(key, (value || "") + val)}
+            />
+          </div>
           <input
             type="password"
             value={value || ""}
@@ -403,7 +675,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
-    // Credential / Connection UI
     if (key === "credential" || key === "connection") {
       const isConnected = !!value;
       return (
@@ -424,13 +695,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
           ) : (
             <button
               onClick={() => {
-                // Real OAuth Pop-up
                 const width = 500;
                 const height = 600;
                 const left = window.screen.width / 2 - width / 2;
                 const top = window.screen.height / 2 - height / 2;
 
-                // Construct Authentication URL
                 const userId = getUserId();
                 const authUrl = `http://localhost:4000/auth/google?userId=${userId}`;
 
@@ -446,7 +715,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
                   }
                 }, 1000);
 
-                // Listen for success message
                 const handler = (event: MessageEvent) => {
                   if (event.data?.type === 'OAUTH_SUCCESS' && event.data?.provider === 'google') {
                     clearInterval(interval);
@@ -467,15 +735,15 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
-    // 3. Operation Selection
     if (key === "operation") {
       let options: string[] = [];
       if (data.nodeType === "google_sheets") {
         options = ["read_sheet", "append_row", "clear_sheet"];
       } else if (data.nodeType === "google_docs") {
         options = ["create_doc", "read_text", "append_text"];
+      } else if (data.nodeType === "google_gmail") {
+        options = ["send_email", "read_emails", "modify_labels", "move_to_spam"];
       } else {
-        // fallback or generic operations
         options = ["read", "write", "update", "delete"];
       }
 
@@ -495,7 +763,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
-    // 4. File Selection (Spreadsheet/Docs)
     if (["spreadsheetId", "documentId", "fileId"].includes(key)) {
       return (
         <div key={key} className="mb-2">
@@ -520,7 +787,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
-    // 5. Hide irrelevant fields
     if (key === "content" && data.nodeType === "google_docs") {
       const op = tempConfig["operation"] || "read_text";
       if (op === "read_text") return null;
@@ -533,7 +799,52 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       return null;
     }
 
-    // 6. Model Selector (Hugging Face or AI)
+    if (data.nodeType === "google_gmail") {
+      const op = tempConfig["operation"] || "send_email";
+      if (op === "send_email" && ["query", "messageId", "addLabels", "removeLabels", "maxLabels"].includes(key)) return null;
+      if (op === "read_emails" && ["to", "subject", "body", "messageId", "addLabels", "removeLabels"].includes(key)) return null;
+      if (op === "modify_labels" && ["to", "subject", "body", "query"].includes(key)) return null;
+      if (op === "move_to_spam" && ["to", "subject", "body", "query", "addLabels", "removeLabels", "maxLabels"].includes(key)) return null;
+
+      if (key === "query" && op === "read_emails") {
+        return (
+          <div key={key} className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-300">Search Query</label>
+              <VariablePicker
+                currentNodeId={id}
+                onSelect={(val) => handleConfigUpdate(key, (value || "") + val)}
+              />
+            </div>
+            <input
+              type="text"
+              value={value || "is:unread"}
+              onChange={(e) => handleConfigUpdate(key, e.target.value)}
+              className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
+              placeholder="e.g. is:unread"
+            />
+            <div className="text-[10px] text-gray-500 mt-1">Use -has:userlabels to avoid re-processing.</div>
+          </div>
+        );
+      }
+
+      if (key === "maxLabels") {
+        return (
+          <div key={key} className="mb-2">
+            <label className="block text-xs font-medium text-gray-300 mb-1">Max Top Tags</label>
+            <input
+              type="number"
+              value={value || 2}
+              onChange={(e) => handleConfigUpdate(key, parseInt(e.target.value))}
+              className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
+              placeholder="2"
+            />
+            <div className="text-[10px] text-gray-500 mt-1">Limits the number of AI tags added per email.</div>
+          </div>
+        );
+      }
+    }
+
     if (key === "model" && (data.nodeType === "hugging_face" || data.nodeType === "ai")) {
       let models = [
         "gpt-4o",
@@ -556,7 +867,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
           "google/gemma-2-9b-it"
         ];
       } else if (data.nodeType === "ai") {
-        // The backend AIService uses Google Generative AI (Gemini).
         models = [
           "gemini-2.5-flash",
           "gemini-2.5-pro",
@@ -623,8 +933,6 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
-    // (Old Webhook UI removed - handled explicitly in render)
-
 
     // Textarea for message or body
     if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
@@ -689,9 +997,23 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               </div>
             </>
           )}
+
+          <div className="mt-2 pt-2 border-t border-gray-800/50 flex flex-col gap-1">
+            {value === "* * * * *" ? (
+              <div className="text-[10px] text-indigo-400 font-medium animate-pulse flex justify-between">
+                <span>Next run:</span>
+                <span>{new Date(Math.ceil(Date.now() / 60000) * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}:00</span>
+              </div>
+            ) : value ? (
+              <div className="text-[10px] text-indigo-400 font-medium">
+                Schedules at the next {currentPreset.toLowerCase().replace('every ', '')} mark.
+              </div>
+            ) : null}
+          </div>
         </div>
-      )
+      );
     }
+
 
     // 7. MCP Tool Config
     if (data.nodeType === "mcp_tool") {
@@ -790,11 +1112,85 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       );
     }
 
+    if (key === "model_id" && data.nodeType === "elevenlabs") {
+      const models = [
+        { id: "eleven_multilingual_v2", name: "Multilingual V2 (New Default)" },
+        { id: "eleven_turbo_v2", name: "Turbo V2 (Fastest)" },
+        { id: "eleven_flash_v2", name: "Flash V2 (Cheapest)" },
+        { id: "eleven_monolingual_v1", name: "Mono V1 (Legacy - Paid Only)" }
+      ];
+      return (
+        <div key={key} className="mb-4">
+          <label className="block text-xs font-semibold text-gray-300 mb-2">ElevenLabs Model</label>
+          <select
+            value={value || "eleven_multilingual_v2"}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full px-2 py-1.5 text-[10px] bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:outline-none"
+          >
+            {models.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+          <p className="text-[9px] text-gray-500 mt-1 italic">V2 is now required for Free Tier users.</p>
+        </div>
+      );
+    }
+
+    if (key === "voiceId" && data.nodeType === "elevenlabs") {
+      const voices = [
+        { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel (Female)" },
+        { id: "pNInz6obpgDQGcFmaJgB", name: "Adam (Male)" },
+        { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh (Male)" },
+        { id: "ErXwobaYiN019PkySvjV", name: "Antoni (Male)" },
+        { id: "AZnzlk1XhkUvSbiU7S2S", name: "Nicole (Female)" },
+        { id: "EXAVITQu4vr4xnSDxMaL", name: "Bella (Female)" }
+      ];
+
+      return (
+        <div key={key} className="mb-4">
+          <label className="block text-xs font-semibold text-gray-300 mb-2">Select Voice</label>
+          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+            {voices.map(v => (
+              <button
+                key={v.id}
+                onClick={() => handleConfigUpdate(key, v.id)}
+                className={`flex items-center space-x-2 p-2 rounded border transition-all text-left ${value === v.id ? 'bg-[#3D5CFF] border-[#3D5CFF] text-white shadow-[0_0_10px_rgba(61,92,255,0.4)]' : 'bg-[#0B0E14] border-gray-800 text-gray-400 hover:border-gray-600'}`}
+              >
+                <div className={`w-2 h-2 rounded-full ${value === v.id ? 'bg-white blink' : 'bg-gray-600'}`}></div>
+                <span className="text-[10px] font-medium">{v.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => handleConfigUpdate(key, e.target.value)}
+              placeholder="Custom Voice ID..."
+              className="w-full px-2 py-1.5 text-[10px] bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:outline-none placeholder-gray-600"
+            />
+          </div>
+          <div className="mt-3 bg-indigo-500/10 border border-indigo-500/20 p-2 rounded">
+            <p className="text-[10px] text-indigo-300">
+              ⚠️ <strong>Free Tier Note:</strong> Some voices might require a paid plan. If the generation fails, try <strong>Rachel</strong> or <strong>Adam</strong> with <strong>Mono V1</strong>.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 8. Default Input
     return (
       <div key={key} className="mb-2">
-        <label className="block text-xs font-medium text-gray-300 mb-1 capitalize">
-          {key.replace(/([A-Z])/g, " $1").trim()}
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-xs font-medium text-gray-300 capitalize">
+            {key.replace(/([A-Z])/g, " $1").trim()}
+          </label>
+          <VariablePicker
+            currentNodeId={id}
+            onSelect={(val) => handleConfigUpdate(key, (value || "") + val)}
+          />
+        </div>
         <input
           type={inputType}
           value={value || ""}
@@ -804,8 +1200,8 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               inputType === "number" ? Number(e.target.value) : e.target.value
             )
           }
-          className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none"
-          placeholder={`Enter ${key} `}
+          className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded focus:ring-1 focus:ring-[#3D5CFF] focus:border-[#3D5CFF] focus:outline-none nodrag"
+          placeholder={`Enter ${key}...`}
         />
       </div>
     );
@@ -824,6 +1220,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               selected ? "border-[#3D5CFF] shadow-blue-900/20" : "border-gray-800 hover:border-gray-700"
         }
         ${isConfigOpen ? "shadow-xl" : ""}
+        ${!(tempConfig.active ?? true) ? "opacity-60 grayscale-[0.5] border-dashed" : ""}
 `}
     >
       {/* Top handle */}
@@ -883,9 +1280,28 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
               <Edit2 className="w-3 h-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
             </div>
           )}
-          <div className="text-xs text-gray-400 capitalize">
-            {data.nodeType}
+          <div className="flex items-center space-x-2">
+            <div className="text-xs text-gray-400 capitalize">
+              {data.nodeType}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleConfigUpdate("active", !(tempConfig.active ?? true));
+              }}
+              className={`p-0.5 rounded-full transition-all duration-200 ${(tempConfig.active ?? true) ? "text-green-500 hover:bg-green-500/10" : "text-gray-500 hover:bg-red-500/10 hover:text-red-500"
+                }`}
+              title={(tempConfig.active ?? true) ? "Deactivate Step" : "Activate Step"}
+            >
+              <Power className={`w-3 h-3 ${!(tempConfig.active ?? true) ? "opacity-30" : "opacity-100"}`} />
+            </button>
           </div>
+          {data.nodeType === "cron" && (tempConfig.active ?? true) && (
+            <div className="mt-1 text-[10px] text-indigo-400 font-bold animate-pulse flex items-center space-x-1">
+              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+              <span>Next: {new Date(Math.ceil(Date.now() / 60000) * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}:00</span>
+            </div>
+          )}
         </div>
 
         <button
@@ -902,7 +1318,7 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
       {/* Configuration Panel - Full Screen Modal */}
       {isConfigOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 nodrag"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 nodrag"
           onClick={(e) => { e.stopPropagation(); setIsConfigOpen(false); }}
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', margin: 0, padding: 0 }}
         >
@@ -1032,6 +1448,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Result Preview Area */}
+      {data.lastRun?.status === 'success' && (
+        <ResultPreview output={data.lastRun.output} />
       )}
 
       {/* Status indicator */}

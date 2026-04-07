@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { prisma } from "../index";
+import { prisma } from "../prisma";
 import { executeWorkflowFromJson } from "@triggerforge/core";
 import { aiService, mcpManager, oauthService, executionService } from "../services";
 

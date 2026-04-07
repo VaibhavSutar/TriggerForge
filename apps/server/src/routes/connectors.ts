@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { prisma } from "../index";
+import { prisma } from "../prisma";
 import { listConnectors, getConnector } from "@triggerforge/connectors";
 console.log("🔍 Connectors module runtime keys:", Object.keys(getConnector))
 console.log("🔍 Connectors module runtime keys:", Object.keys(listConnectors))

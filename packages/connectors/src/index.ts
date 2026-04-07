@@ -29,6 +29,11 @@ import { huggingFaceConnector } from "./connectors/huggingFace.js";
 import { fileConnector } from "./connectors/file.js";
 import { websiteScraperConnector } from "./connectors/websiteScraper.js";
 import { googleMapsDeepScraperConnector } from "./connectors/googleMapsScraper.js";
+import { pexelsConnector } from "./connectors/pexels.js";
+import { shotstackConnector } from "./connectors/shotstack.js";
+import { ttsConnector } from "./connectors/tts.js";
+import { elevenLabsConnector } from "./connectors/elevenlabs.js";
+import { videoRendererLocalConnector } from "./connectors/videoRendererLocal.js";
 
 // AI
 import { aiConnector } from "./connectors/ai.js";
@@ -50,7 +55,7 @@ import { openAIConnector } from "./connectors/openai.js";
 export { startConnector, webhookConnector, cronConnector };
 export { httpConnector, delayConnector, printConnector, randomConnector, mathConnector, conditionConnector, loopConnector };
 export { googleGmailConnector, googleDocsConnector, googleSheetsConnector, discordWebhookConnector, slackConnector, twitterConnector, telegramConnector, teamsConnector, emailConnector, huggingFaceConnector, fileConnector };
-export { aiConnector, mcpToolConnector };
+export { aiConnector, mcpToolConnector, pexelsConnector, shotstackConnector, ttsConnector, videoRendererLocalConnector, elevenLabsConnector };
 export { textSplitterConnector, googleDriveConnector, geminiConnector, pineconeConnector, vectorStoreToolConnector, memoryConnector, agentConnector, serpApiConnector, openAIConnector, websiteScraperConnector, googleMapsDeepScraperConnector };
 
 // Registry
@@ -90,7 +95,12 @@ const ALL_CONNECTORS: Connector[] = [
   serpApiConnector,
   openAIConnector,
   websiteScraperConnector,
-  googleMapsDeepScraperConnector
+  googleMapsDeepScraperConnector,
+  pexelsConnector,
+  shotstackConnector,
+  ttsConnector,
+  videoRendererLocalConnector,
+  elevenLabsConnector
 ];
 
 export function listConnectors(): Connector[] {

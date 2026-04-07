@@ -1,7 +1,7 @@
 
-import { prisma } from "../index";
 import { executeWorkflowFromJson } from "@triggerforge/core";
 import { aiService, mcpManager, oauthService } from "./index";
+import { prisma } from "../prisma";
 
 export class ExecutionService {
 

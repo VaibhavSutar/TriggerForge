@@ -248,10 +248,10 @@ export default function WorkflowEditor({
   /* ----------------------------------
      SAVE WORKFLOW (IMPORTANT)
   ----------------------------------- */
-  const saveWorkflow = useCallback(async () => {
+  const saveWorkflow = useCallback(async (nodesToSave = nodes) => {
     if (!workflowId || !userId) return;
 
-    const preparedNodes = applyEdgesToNodes(nodes, edges);
+    const preparedNodes = applyEdgesToNodes(nodesToSave, edges);
 
     await fetch(`/api/workflows`, {
       method: "POST",
@@ -284,32 +284,41 @@ export default function WorkflowEditor({
     const newLogLines: string[] = ["▶️ [System] Starting workflow..."];
 
     logs.forEach((l: any) => {
-      if (!nodeRunData[l.nodeId]) nodeRunData[l.nodeId] = { status: 'success' };
-
-      const timestamp = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const label = labelMap.get(l.nodeId) || l.nodeId;
+      let timestamp = "Running...";
+      let label = "System";
       let statusIcon = "ℹ️";
       let logColor = "text-gray-300";
+      let message = "";
 
-      if (l.message === "Execution started") {
-        nodeRunData[l.nodeId].status = 'RUNNING';
-        statusIcon = "⚡";
-        logColor = "text-blue-400";
-        if (l.data !== undefined) nodeRunData[l.nodeId].input = l.data;
-      } else if (l.message === "Execution completed") {
-        nodeRunData[l.nodeId].status = 'success';
-        statusIcon = "✅";
-        logColor = "text-green-400";
-        if (l.data !== undefined) nodeRunData[l.nodeId].output = l.data;
-      } else if (l.message === "Execution failed" || l.message === "Execution crashed") {
-        nodeRunData[l.nodeId].status = 'error';
-        statusIcon = "❌";
-        logColor = "text-red-400";
-        nodeRunData[l.nodeId].output = l.data;
+      if (typeof l === 'string') {
+        message = l;
+      } else {
+        timestamp = new Date(l.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        label = labelMap.get(l.nodeId) || l.nodeId || "System";
+        message = l.message;
+
+        if (!nodeRunData[l.nodeId]) nodeRunData[l.nodeId] = { status: 'success' };
+
+        if (l.message === "Execution started") {
+          nodeRunData[l.nodeId].status = 'RUNNING';
+          statusIcon = "⚡";
+          logColor = "text-blue-400";
+          if (l.data !== undefined) nodeRunData[l.nodeId].input = l.data;
+        } else if (l.message === "Execution completed") {
+          nodeRunData[l.nodeId].status = 'success';
+          statusIcon = "✅";
+          logColor = "text-green-400";
+          if (l.data !== undefined) nodeRunData[l.nodeId].output = l.data;
+        } else if (l.message === "Execution failed" || l.message === "Execution crashed") {
+          nodeRunData[l.nodeId].status = 'error';
+          statusIcon = "❌";
+          logColor = "text-red-400";
+          nodeRunData[l.nodeId].output = l.data;
+        }
       }
 
-      let logMsg = `[${timestamp}] ${statusIcon} [${label}] ${l.message}`;
-      if ((l.message === "Execution failed" || l.message === "Execution crashed") && l.data) {
+      let logMsg = `[${timestamp}] ${statusIcon} [${label}] ${message}`;
+      if (l && typeof l === 'object' && (l.message === "Execution failed" || l.message === "Execution crashed") && l.data) {
         const errMsg = typeof l.data === 'string' ? l.data : (l.data.message || JSON.stringify(l.data));
         logMsg += `: ${errMsg}`;
       }
@@ -392,7 +401,14 @@ export default function WorkflowEditor({
     setShowRunPanel(true);
     setRunOutput(null);
 
-    await saveWorkflow();
+    // Clear previous node results
+    const clearedNodes = nodes.map((n) => ({
+      ...n,
+      data: { ...n.data, lastRun: undefined }
+    }));
+    setNodes(clearedNodes);
+
+    await saveWorkflow(clearedNodes);
 
     // Fire and forget (let polling handle UI updates), BUT await validation
     const r = await fetch(

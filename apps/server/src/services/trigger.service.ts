@@ -1,8 +1,9 @@
 import cron, { ScheduledTask } from "node-cron";
-import { prisma } from "../index"; // Assuming shared prisma instance
+
 import { executeWorkflowFromJson } from "@triggerforge/core";
 // import services...
 import { aiService, mcpManager, oauthService, executionService } from "./index";
+import { prisma } from "../prisma";
 
 export class TriggerService {
     private cronTasks: Map<string, ScheduledTask> = new Map();
@@ -22,15 +23,15 @@ export class TriggerService {
             if (!Array.isArray(json.nodes)) continue;
 
             // Find cron nodes
-            const cronNode = json.nodes.find((n: any) => n.type === "cron");
-            if (cronNode) {
-                this.registerCron(wf.id, cronNode.config.expression, json);
+            const cronNode = json.nodes.find((n: any) => n.data?.nodeType === "cron" || n.type === "cron");
+            if (cronNode && cronNode.data?.config?.active !== false) {
+                this.registerCron(wf.id, cronNode.data?.config?.expression || cronNode.config?.expression, json);
             }
 
             // Find polling trigger nodes
-            const driveTrigger = json.nodes.find((n: any) => n.type === "google_drive_trigger");
-            if (driveTrigger) {
-                this.registerPollingTrigger(wf.id, "google_drive_trigger", driveTrigger.config);
+            const driveTrigger = json.nodes.find((n: any) => n.data?.nodeType === "google_drive_trigger" || n.type === "google_drive_trigger");
+            if (driveTrigger && driveTrigger.data?.config?.active !== false) {
+                this.registerPollingTrigger(wf.id, "google_drive_trigger", driveTrigger.data?.config || driveTrigger.config);
             }
         }
 

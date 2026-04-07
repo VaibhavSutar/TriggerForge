@@ -110,7 +110,7 @@ export class AIService {
 
         const connectorListStr = connectors
             ? connectors.map(c => `- ${c.id}${c.title ? ` (${c.title})` : ''}`).join('\n')
-            : `- cron (schedule trigger)\n- webhook (http trigger)\n- http (request)\n- ai (text gen using gemini-2.0-flash)\n- condition (logic branching)\n- loop (array iteration)\n- delay (wait time)\n- google_gmail (Gmail)\n- google_sheets (Google Sheets)\n- slack (Slack notifications)`;
+            : `- cron (schedule trigger)\n- webhook (http trigger)\n- http (request)\n- ai (text gen using gemini-2.0-flash)\n- condition (logic branching)\n- loop (array iteration)\n- delay (wait time)\n- google_gmail (Gmail)\n- google_sheets (Google Sheets)\n- slack (Slack notifications)\n- pexels (Free stock video/image search)\n- shotstack (Programmatic video editing/rendering)\n- tts (Basic Text to Speech)\n- elevenlabs (Premium AI voices with high quality)\n- video_renderer_local (Free FFMPEG video generation on server)`;
 
         const systemPrompt = `
 You are a workflow architect for TriggerForge.
@@ -161,7 +161,7 @@ Structure:
 
         try {
             // Using gemini-2.0-flash-exp for the latest experimental features
-            const m = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+            const m = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
             const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
 

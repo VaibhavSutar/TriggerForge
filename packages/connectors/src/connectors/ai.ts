@@ -34,13 +34,8 @@ export const aiConnector: Connector = {
                 if (mdMatch) {
                     try {
                         const parsed = JSON.parse(mdMatch[1]);
+                        // Merge fields onto root output to support direct {{ $node.2.output.field }} access
                         Object.assign(output, parsed);
-                        // Also attach to text field as properties to satisfy some mapping hallucinations
-                        if (output.text instanceof String || typeof output.text === "string") {
-                           const textObj = new String(output.text);
-                           Object.assign(textObj, parsed);
-                           output.text = textObj;
-                        }
                         output.json = parsed; // Maintain fields under .json too
                         jsonFound = true;
                     } catch (e) {}
@@ -48,7 +43,6 @@ export const aiConnector: Connector = {
 
                 // 2. Fallback to bracket matching if not found or parse failed
                 if (!jsonFound) {
-                    // Try to find the most likely JSON object (greedy bracket matching)
                     const firstBracket = result.indexOf("{");
                     const lastBracket = result.lastIndexOf("}");
                     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
@@ -57,11 +51,6 @@ export const aiConnector: Connector = {
                             const parsed = JSON.parse(potentialJson);
                             if (typeof parsed === "object" && parsed !== null) {
                                 Object.assign(output, parsed);
-                                // Mirror to text properties
-                                const textObj = new String(output.text);
-                                Object.assign(textObj, parsed);
-                                output.text = textObj;
-                                
                                 output.json = parsed;
                                 jsonFound = true;
                             }
