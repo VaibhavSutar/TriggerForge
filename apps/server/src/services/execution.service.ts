@@ -147,15 +147,24 @@ export class ExecutionService {
                             data: err,
                             timestamp: Date.now()
                         });
+                    },
+                    onCheckStatus: async () => {
+                        // Check if status in DB is still RUNNING
+                        const current = await prisma.execution.findUnique({
+                            where: { id: execution.id },
+                            select: { status: true }
+                        });
+                        return current?.status === "RUNNING";
                     }
                 }
             );
 
             // Update Success (Final state)
+            const finalStatus = result.cancelled ? "FAILED" : (result.success ? "SUCCEEDED" : "FAILED");
             await prisma.execution.update({
                 where: { id: execution.id },
                 data: {
-                    status: result.success ? "SUCCEEDED" : "FAILED",
+                    status: finalStatus,
                     output: result.context.nodeResults, // Final consistent output
                     logs: result.context.logs as any, // Final consistent logs
                 }
@@ -194,6 +203,25 @@ export class ExecutionService {
             where: { workflowId },
             orderBy: { createdAt: 'desc' },
             take: limit
+        });
+    }
+
+    /**
+     * Stop a running execution
+     */
+    async stopExecution(executionId: string) {
+        return prisma.execution.update({
+            where: { id: executionId },
+            data: {
+                status: "FAILED", // Using FAILED as a terminal state that triggers the stop check
+                logs: {
+                    push: {
+                        nodeId: "system",
+                        message: "STOP request received",
+                        timestamp: Date.now()
+                    }
+                } as any
+            }
         });
     }
 }

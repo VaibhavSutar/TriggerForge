@@ -508,7 +508,7 @@ export const CRON_PRESETS: Record<string, string> = {
 
 const ResultPreview = ({ output }: { output: any }) => {
   if (!output) return null;
-  
+
   const renderItem = (item: any, isBatch = false) => {
     const url = item.url || item.link || item.audioUrl;
     if (!url || typeof url !== 'string' || url.includes('{{')) return null;
@@ -521,9 +521,9 @@ const ResultPreview = ({ output }: { output: any }) => {
       <div key={url} className={`${isBatch ? "mb-1" : "mt-3"} p-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300 nodrag`}>
         <div className="flex items-center justify-between mb-2">
           {!isBatch && <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Generated Output</span>}
-          <a 
-            href={url} 
-            target="_blank" 
+          <a
+            href={url}
+            target="_blank"
             rel="noopener noreferrer"
             className="p-1 px-2 bg-indigo-500 text-white rounded text-[9px] font-bold hover:bg-indigo-600 transition-colors flex items-center space-x-1 ml-auto"
           >
@@ -531,31 +531,31 @@ const ResultPreview = ({ output }: { output: any }) => {
             <span>OPEN</span>
           </a>
         </div>
-        
+
         {isVideo && (
           <div className="relative group cursor-pointer overflow-hidden rounded-md border border-gray-800 bg-black aspect-video flex items-center justify-center min-h-[40px]">
-             <video src={url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" muted loop onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
-             <div className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Play className={`${isBatch ? "w-4 h-4" : "w-6 h-6"} text-white drop-shadow-lg`} />
-             </div>
+            <video src={url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" muted loop onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
+            <div className="absolute inset-0 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Play className={`${isBatch ? "w-4 h-4" : "w-6 h-6"} text-white drop-shadow-lg`} />
+            </div>
           </div>
         )}
 
         {isImage && (
           <div className="rounded-md border border-gray-800 overflow-hidden bg-black aspect-video">
-             <img src={url} className="w-full h-full object-contain" alt="Preview" />
+            <img src={url} className="w-full h-full object-contain" alt="Preview" />
           </div>
         )}
 
         {isAudio && (
           <div className="flex items-center space-x-2 p-1 bg-black/40 rounded border border-gray-800">
-             <MessageSquare className="w-3 h-3 text-indigo-400" />
-             <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div className="w-1/3 h-full bg-indigo-500 animate-pulse" />
-             </div>
-             <a href={url} download className="p-1 text-gray-400 hover:text-white">
-                <Download className="w-2.5 h-2.5" />
-             </a>
+            <MessageSquare className="w-3 h-3 text-indigo-400" />
+            <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-1/3 h-full bg-indigo-500 animate-pulse" />
+            </div>
+            <a href={url} download className="p-1 text-gray-400 hover:text-white">
+              <Download className="w-2.5 h-2.5" />
+            </a>
           </div>
         )}
 
@@ -575,8 +575,8 @@ const ResultPreview = ({ output }: { output: any }) => {
     return (
       <div className="mt-3 space-y-2">
         <div className="px-1 flex justify-between items-center bg-indigo-500/20 p-1 rounded border border-indigo-500/30">
-           <span className="text-[10px] font-black text-indigo-400 uppercase">Batch Success ({outputArr.length})</span>
-           <Zap className="w-3 h-3 text-indigo-500 animate-pulse" />
+          <span className="text-[10px] font-black text-indigo-400 uppercase">Batch Success ({outputArr.length})</span>
+          <Zap className="w-3 h-3 text-indigo-500 animate-pulse" />
         </div>
         <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
           {outputArr.map(item => renderItem(item, true))}

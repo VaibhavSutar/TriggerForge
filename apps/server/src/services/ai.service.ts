@@ -105,78 +105,105 @@ export class AIService {
         throw new Error("Tool calling not yet implemented for Gemini adapter");
     }
 
-    async generateWorkflow(prompt: string, connectors?: { id: string, title?: string }[]): Promise<any> {
+    async generateWorkflow(
+        prompt: string,
+        connectors?: { id: string, title?: string }[],
+        context?: { nodes: any[], edges: any[], logs: any[] },
+        templates?: { id: string, name: string, description: string }[]
+    ): Promise<any> {
         if (!this.genAI) throw new Error("AI Service not configured");
 
         const connectorListStr = connectors
-            ? connectors.map(c => `- ${c.id}${c.title ? ` (${c.title})` : ''}`).join('\n')
-            : `- cron (schedule trigger)\n- webhook (http trigger)\n- http (request)\n- ai (text gen using gemini-2.0-flash)\n- condition (logic branching)\n- loop (array iteration)\n- delay (wait time)\n- google_gmail (Gmail)\n- google_sheets (Google Sheets)\n- slack (Slack notifications)\n- pexels (Free stock video/image search)\n- shotstack (Programmatic video editing/rendering)\n- tts (Basic Text to Speech)\n- elevenlabs (Premium AI voices with high quality)\n- video_renderer_local (Free FFMPEG video generation on server)`;
+            ? JSON.stringify(connectors.map(c => ({
+                id: c.id,
+                title: c.title,
+                config_template: (c as any).defaultConfig
+            })), null, 2)
+            : "No connector metadata provided";
+
+        const currentNodesStr = context?.nodes?.length
+            ? JSON.stringify(context.nodes.map(n => ({ id: n.id, label: n.data?.label, type: n.data?.nodeType, config: n.data?.config })), null, 2)
+            : "No nodes yet";
+
+        const currentEdgesStr = context?.edges?.length
+            ? JSON.stringify(context.edges, null, 2)
+            : "No edges yet";
+
+        const currentLogsStr = context?.logs?.length
+            ? JSON.stringify(context.logs.slice(-20), null, 2) // Last 20 logs for context
+            : "No recent logs available";
+
+        const templateListStr = templates?.length
+            ? JSON.stringify(templates, null, 2)
+            : "No pre-built templates available";
 
         const systemPrompt = `
-You are a workflow architect for TriggerForge.
-Your goal is to convert user requests into a valid Workflow JSON structure using the available connectors.
+You are the TriggerForge AI Workflow Assistant, a highly advanced agentic architect.
+Your goal is to help users BUILD, EDIT, and DEBUG workflows.
 
-### Available Connectors (Use these IDs for "nodeType"):
+### OPERATING MODE:
+1. **Analyze**: Look at the current workflow and the latest logs to understand what's happening.
+2. **Action**: Decide if you need to generate a new workflow ("REPLACE"), modify parts of the current one ("MODIFY"), or just answer a question ("CHAT").
+3. **Execution**: Return a specialized JSON structure containing your thoughts and the technical payload.
+
+### Available Connectors:
 ${connectorListStr}
 
-### Logic Nodes (Always Available):
-- condition (config: { expression: "boolean logic" })
-- delay (config: { seconds: number })
-- loop (config: { items: "{{$node.id}}" })
+### Logic & Routing:
+- **condition**: { condition: "string expression like {{$node.id.prop}} === true" }. Has "true" and "false" source handles.
+- **loop**: { array: "{{$node.id.items}}" }. Iterates items for downstream nodes.
+- **ai**: Returns JSON. Always encourage parsing via "{{$node.id.isSpam}}".
 
-### Handle JSON Output:
-If a node (like 'ai') returns JSON, use "{{$node.id.fieldName}}" to access properties.
-Nodes automatically extract JSON from markdown or raw text.
+### Current Workflow State:
+Nodes:
+${currentNodesStr}
 
-### Output Format:
-Return ONLY a valid JSON object. Do not include markdown formatting (like \`\`\`json).
-Structure:
+Edges:
+${currentEdgesStr}
+
+Latest Execution Logs:
+${currentLogsStr}
+
+### Output Format (Strictly JSON, no markdown):
 {
-  "nodes": [
-    {
-      "id": "node_1",
-      "type": "workflowNode",
-      "position": { "x": 0, "y": 0 },
-      "data": {
-        "label": "Human Readable Name",
-        "nodeType": "connector_id",
-        "config": { ...specific_config }
-      }
-    }
-  ],
-  "edges": [
-    { "id": "edge_1", "source": "node_1", "target": "node_2" }
-  ]
+  "action": "MODIFY" | "REPLACE" | "CHAT" | "RUN",
+  "message": "Human explained feedback to the user",
+  "suggestedTemplateId": "string (optional, match an ID from Available Templates)",
+  "workflow": {
+    "nodes": [
+      { "id": "node_1", "title": "Label", "nodeType": "connector_id", "config": {}, "position": { "x": 0, "y": 0 } }
+    ],
+    "edges": [
+      { "source": "node_1", "target": "node_2", "sourceHandle": "next", "targetHandle": "next" }
+    ]
+  }
 }
 
 ### Rules:
-1. Start with a Trigger (cron or webhook).
-2. Use MUSTACHE syntax for data passing, e.g., "{{$node.node_1.property}}".
-3. For 'ai' nodes extracting leads, always check both search fields: "{{$node.id.output.organic_results}}{{$node.id.output.leads_json}}".
-4. 'google_maps_deep_scraper' returns results in 'leads_json'. 'serpapi' returns results in 'organic_results'.
-5. For 'ai' nodes, always enforce "Output ONLY the final content" in the prompt.
-6. For Google Sheets, default to sheetName 'Leads' if not specified.
-7. If the request is complex, use 'loop' and 'condition' nodes correctly.
+1. If DEBUGGING (based on logs): Identify the failing node in 'message' and return the fixed 'config' in 'workflow.nodes'.
+2. If EDITING: Maintain existing node IDs if possible to keep connections intact.
+3. If logs show a Gemini API Rate Limit (429): Advise the user to use 'delay' nodes or check their billing.
+4. If asked to "check logs": Summarize the failures or successes from the 'Latest Execution Logs' provided.
+5. For NEW nodes, ALWAYS include "position": { "x": number, "y": number }.
+6. TEMPLATES: Check the 'Available Templates' below. If one matches the user's intent perfectly, include its ID in 'suggestedTemplateId'.
+7. ALWAYS output ONLY the raw JSON object.
 `;
 
-        try {
-            // Using gemini-2.0-flash-exp for the latest experimental features
-            const m = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const finalSystemPrompt = `${systemPrompt}\n\n### Available Templates:\n${templateListStr}`;
 
-            const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
+        try {
+            const m = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+            const fullPrompt = `${finalSystemPrompt}\n\nUser Message: ${prompt}`;
 
             const result = await m.generateContent(fullPrompt);
             const content = result.response.text();
 
-            if (!content) {
-                throw new Error("AI returned empty response");
-            }
+            if (!content) throw new Error("AI returned empty response");
 
-            // Clean up markdown code blocks if present
             const jsonStr = content.replace(/^```json\s*/, "").replace(/\s*```$/, "");
             return JSON.parse(jsonStr);
         } catch (error: any) {
-            console.error("[AIService] Generation failed:", error);
+            console.error("[AIService] Interaction failed:", error);
             throw new Error(error.message);
         }
     }

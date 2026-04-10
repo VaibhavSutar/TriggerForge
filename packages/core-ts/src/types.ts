@@ -102,4 +102,5 @@ export interface Workflow {
 export interface ExecutionResult {
   success: boolean;
   context: WorkflowContext;
+  cancelled?: boolean;
 }

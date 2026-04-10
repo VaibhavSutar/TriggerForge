@@ -126,6 +126,12 @@ async function executeNode(
 
     return result;
   } catch (err: any) {
+    context.logs.push({
+      nodeId: id,
+      message: "Execution crashed",
+      data: err.message,
+      timestamp: Date.now(),
+    });
     return { success: false, error: err.message };
   }
 }
@@ -160,7 +166,7 @@ export async function executeWorkflow(
     await executeNode(node, context);
   }
 
-  return { success: true, context };
+  return { success: true, context, cancelled: false };
 }
 
 /* ----------------------------------
@@ -179,6 +185,7 @@ export async function executeWorkflowFromJson(
     onNodeStart?: (nodeId: string, input: any) => Promise<void>;
     onNodeFinish?: (nodeId: string, output: any) => Promise<void>;
     onNodeError?: (nodeId: string, error: any) => Promise<void>;
+    onCheckStatus?: () => Promise<boolean>;
   }
 ): Promise<ExecutionResult> {
   if (!workflowJson || !Array.isArray(workflowJson.nodes)) {
@@ -255,8 +262,20 @@ export async function executeWorkflowFromJson(
   const execQueue: { nodeId: string; input: any; item?: any; iterationResults: Record<string, any> }[] =
     queue.map(id => ({ nodeId: id, input: initialInput, iterationResults: {} }));
 
+  let isCancelled = false;
   while (execQueue.length > 0) {
     const { nodeId, input: currentInput, item, iterationResults } = execQueue.shift()!;
+    
+    // Check if we should stop
+    if (callbacks?.onCheckStatus) {
+      const ok = await callbacks.onCheckStatus();
+      if (!ok) {
+        context.logs.push({ nodeId: "system", message: "Execution stopped by user", timestamp: Date.now() });
+        isCancelled = true;
+        break;
+      }
+    }
+
     const node = nodeMap.get(nodeId);
     if (!node) continue;
 
@@ -312,7 +331,7 @@ export async function executeWorkflowFromJson(
     }
   }
 
-  return { success: true, context };
+  return { success: !isCancelled, context, cancelled: isCancelled };
 }
 
 /* ----------------------------------

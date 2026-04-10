@@ -7,7 +7,7 @@ export const loopConnector: Connector = {
 
     async run(ctx: ConnectorContext, config: Record<string, any>): Promise<ConnectorResult> {
         let array = config.array || config.items;
-        
+
         // If array is not explicitly provided, try to use the input
         if (!array) {
             array = ctx.input;
@@ -36,11 +36,26 @@ export const loopConnector: Connector = {
             }
         }
 
-        // Smart extraction: if AI returned { "reels": [...] } or previous node returned { emails: [...] }
+        // Smart extraction: if AI returned { "items": [...] } or { "text": "[...]" }
         if (typeof array === "object" && array !== null && !Array.isArray(array)) {
-            const values = Object.values(array);
-            if (values.length === 1 && Array.isArray(values[0])) {
-                array = values[0];
+            // Priority 1: Check if any value is already an array
+            const arrayKey = Object.keys(array).find(k => Array.isArray(array[k]));
+            if (arrayKey) {
+                array = array[arrayKey];
+            } else {
+                // Priority 2: Check if any value is a JSON string representing an array
+                const jsonKey = Object.keys(array).find(k => {
+                    if (typeof array[k] !== "string") return false;
+                    const trimmed = (array[k] as string).trim();
+                    return trimmed.startsWith("[") && trimmed.endsWith("]");
+                });
+                if (jsonKey) {
+                    try {
+                        array = JSON.parse(array[jsonKey]);
+                    } catch (e) {
+                        // Ignore and proceed to error at line 47
+                    }
+                }
             }
         }
 

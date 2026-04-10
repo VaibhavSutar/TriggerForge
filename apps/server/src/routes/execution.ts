@@ -45,4 +45,19 @@ export async function executionRoutes(app: FastifyInstance) {
             return reply.code(500).send({ ok: false, error: "Failed" });
         }
     });
+
+    /**
+     * 🛑 Stop Execution
+     * POST /execution/:id/stop
+     */
+    app.post<{ Params: { id: string } }>("/:id/stop", async (req, reply) => {
+        const { id } = req.params;
+        try {
+            const { executionService } = await import("../services");
+            await executionService.stopExecution(id);
+            return reply.send({ ok: true });
+        } catch (err) {
+            return reply.code(500).send({ ok: false, error: "Failed to stop" });
+        }
+    });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState, useEffect } from "react";
-import { X, Clock, Shield } from "lucide-react";
+import { Shield, X } from "lucide-react";
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -25,6 +25,41 @@ import { ExecutionHistory } from "@/components/workflow/ExecutionHistory";
 import type { ConnectorManifest } from "@/app/types/workflow";
 import { LOCAL_STORAGE_KEYS } from "@/config/constants";
 import { WorkflowAssistant } from "@/components/workflow/WorkflowAssistant";
+import { WORKFLOW_TEMPLATES } from "@/data/templates";
+import { Walkthrough, WalkthroughStep } from "@/components/workflow/Walkthrough";
+
+const walkthroughSteps: WalkthroughStep[] = [
+  {
+    target: '[data-tour="toolbar-main"]',
+    title: 'Welcome to TriggerForge',
+    content: "This is the main editor toolbar where you can manage your workflow. Let's take a quick tour.",
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="assistant-toggle"]',
+    title: 'AI Assistant',
+    content: 'Click here to open our intelligent AI Assistant. It can help you build workflows instantly from templates or using natural language.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="add-node-btn"]',
+    title: 'Add Node',
+    content: 'Manually add new action nodes, triggers, or integrations to your workflow canvas.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="run-workflow-btn"]',
+    title: 'Run & Test',
+    content: 'Ready? Hit this button to execute your workflow and see live results in the console.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="save-workflow-btn"]',
+    title: 'Save Changes',
+    content: 'Always make sure to save your work! Your workflows are stored securely in the cloud.',
+    position: 'bottom',
+  }
+];
 
 const nodeTypes: NodeTypes = { workflowNode: WorkflowNode };
 const initialNodes: Node[] = [];
@@ -45,7 +80,7 @@ function applyEdgesToNodes(nodes: Node[], edges: Edge[]) {
   return nodes.map((n) => ({
     id: n.id,
     type: n.data.nodeType,
-    position: n.position,
+    position: n.position || { x: 0, y: 0 },
     data: n.data,
     config: {
       ...(n.data?.config ?? {}),
@@ -73,8 +108,9 @@ export default function WorkflowEditor({
   const [showHistory, setShowHistory] = useState(false);
   const [executionId, setExecutionId] = useState<string | null>(null);
 
-  // Add state for assistant
+  // Add state for assistant & walkthrough
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [connectors, setConnectors] = useState<ConnectorManifest[]>([]);
   const [isLoadingConnectors, setIsLoadingConnectors] = useState(false);
 
@@ -120,6 +156,7 @@ export default function WorkflowEditor({
     const restoredNodes = (wf.json?.nodes ?? []).map((n: any) => ({
       ...n,
       type: "workflowNode",
+      position: n.position || { x: 0, y: 0 },
       data: {
         ...n.data,
         workflowId: id, // Inject ID for webhook URL generation
@@ -198,7 +235,7 @@ export default function WorkflowEditor({
         return {
           id: realId,
           type: "workflowNode",
-          position: tn.position,
+          position: (tn.position?.x !== undefined) ? tn.position : { x: 250, y: 100 * (index + 1) },
           data: {
             label: tn.label,
             nodeType: tn.connectorId,
@@ -210,13 +247,20 @@ export default function WorkflowEditor({
       });
 
       // 2. Create connections based on mapping
-      const newEdges: Edge[] = template.edges.map((te, index) => ({
-        id: `edge_${timestamp}_${index}`,
-        source: idMap.get(te.source)!,
-        target: idMap.get(te.target)!,
-        animated: true,
-        style: { stroke: "#6366f1", strokeWidth: 2 },
-      }));
+      const newEdges: Edge[] = template.edges.map((te, index) => {
+        const sourceId = idMap.get(te.source) || te.source;
+        const targetId = idMap.get(te.target) || te.target;
+
+        return {
+          id: `edge_${timestamp}_${index}`,
+          source: sourceId,
+          target: targetId,
+          sourceHandle: te.sourceHandle,
+          targetHandle: te.targetHandle,
+          animated: true,
+          style: { stroke: "#6366f1", strokeWidth: 2 },
+        };
+      });
 
       // 3. Resolve internal references in config (e.g. {{$node.1.output}})
       // This is a simple replacements for {{ $node.OLD_ID... }} -> {{ $node.NEW_ID... }}
@@ -340,30 +384,37 @@ export default function WorkflowEditor({
     }));
   }, [nodes, setNodes]);
 
-  // Polling Effect
+  // Polling Effect (Detects both manual and external triggers like Cron)
   useEffect(() => {
-    if (!isRunning) return;
+    if (!workflowId) return;
 
     let interval: NodeJS.Timeout;
-    const startTime = Date.now();
 
     const poll = async () => {
       try {
         let targetId = executionId;
 
         if (!targetId) {
-          // Try to find the execution we just started (created within last 10s)
+          // Check for any currently running or very recent executions
           const res = await fetch(`/api/execution/workflow/${workflowId}`);
           const data = await res.json();
           if (data.ok && data.executions?.length > 0) {
-            // Check latest execution
             const latest = data.executions[0];
             const createdTime = new Date(latest.createdAt).getTime();
-            // Only pick it if it's new (created after we started the 'Run' sequence or close to it)
-            // Using a buffer of 30 seconds to be safe
-            if (Math.abs(Date.now() - createdTime) < 30000 || latest.status === 'RUNNING') {
+
+            // If it's running, automatically switch to it
+            // Or if it started in the last 15 seconds (to catch fresh background triggers)
+            const isActive = latest.status === 'RUNNING' || latest.status === 'PENDING';
+            const isFresh = Math.abs(Date.now() - createdTime) < 15000;
+
+            if (isActive || (isFresh && !['SUCCEEDED', 'FAILED'].includes(latest.status))) {
               targetId = latest.id;
               setExecutionId(targetId);
+
+              if (!isRunning && isActive) {
+                setIsRunning(true);
+                setShowRunPanel(true);
+              }
             }
           }
         }
@@ -379,11 +430,15 @@ export default function WorkflowEditor({
             }
           }
         }
-      } catch (e) { console.error("Polling error:", e); }
+      } catch (e) {
+        console.error("Polling error:", e);
+      }
     };
 
-    interval = setInterval(poll, 1000);
-    poll(); // immediate
+    // Poll at 1s if running, 5s if idle (to detect external triggers)
+    const intervalTime = isRunning ? 1000 : 5000;
+    interval = setInterval(poll, intervalTime);
+    if (isRunning) poll(); // Immediate if we manually triggered
 
     return () => clearInterval(interval);
   }, [isRunning, workflowId, executionId, processExecutionUpdate]);
@@ -435,6 +490,19 @@ export default function WorkflowEditor({
     }
 
   }, [workflowId, userId, saveWorkflow, processExecutionUpdate]);
+
+  const stopWorkflow = useCallback(async () => {
+    if (!executionId) return;
+
+    try {
+      await fetch(`/api/execution/${executionId}/stop`, {
+        method: "POST",
+      });
+      setRunLogs(prev => [...prev, "🛑 Stop request sent..."]);
+    } catch (err) {
+      console.error("Failed to stop:", err);
+    }
+  }, [executionId]);
 
   /* ----------------------------------
      EXPORT / IMPORT
@@ -490,8 +558,135 @@ export default function WorkflowEditor({
     }
   }, [setNodes, setEdges, updateNodeData]);
 
-  if (!workflowId) return null;
+  const onModifyWorkflow = useCallback((newNodes: any[], newEdges: any[]) => {
+    setNodes((currentNodes) => {
+      const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
+      const nextNodes = [...currentNodes];
 
+      newNodes.forEach(nn => {
+        // Robust property normalization
+        const id = nn.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const label = nn.label || nn.title || nn.data?.label || "New Node";
+        const nodeType = nn.nodeType || nn.type || nn.data?.nodeType || "http";
+        const config = nn.config || nn.data?.config || {};
+
+        const existing = nodeMap.get(id);
+        if (existing) {
+          const idx = nextNodes.findIndex(n => n.id === id);
+          nextNodes[idx] = {
+            ...existing,
+            data: {
+              ...existing.data,
+              label,
+              nodeType,
+              config: { ...existing.data.config, ...config },
+              onUpdate: updateNodeData
+            },
+            position: (nn.position?.x !== undefined) ? nn.position : existing.position
+          };
+        } else {
+          nextNodes.push({
+            id,
+            type: "workflowNode",
+            position: (nn.position?.x !== undefined) ? nn.position : { x: 400, y: 400 },
+            data: {
+              label,
+              nodeType,
+              config,
+              onUpdate: updateNodeData,
+              workflowId
+            }
+          });
+        }
+      });
+      return nextNodes;
+    });
+
+    if (newEdges && newEdges.length > 0) {
+      setEdges((currentEdges) => {
+        const edgeMap = new Map(currentEdges.map(e => [e.id || `${e.source}->${e.target}`, e]));
+        const nextEdges = [...currentEdges];
+
+        newEdges.forEach(ne => {
+          // Robust edge normalization
+          const source = ne.source || ne.source_node_id || ne.from;
+          const target = ne.target || ne.target_node_id || ne.to;
+
+          // Hallucination safety: ReactFlow uses null for the default handle. 
+          // AI often says "next" which doesn't exist.
+          let sourceHandle = ne.sourceHandle || ne.source_handle;
+          if (sourceHandle === "next") sourceHandle = null;
+
+          let targetHandle = ne.targetHandle || ne.target_handle;
+          if (targetHandle === "next") targetHandle = null;
+
+          if (!source || !target) return;
+
+          const id = ne.id || `${source}->${target}`;
+          if (!edgeMap.has(id)) {
+            nextEdges.push({
+              id,
+              source,
+              target,
+              sourceHandle,
+              targetHandle,
+              animated: true,
+              style: { stroke: "#6366f1", strokeWidth: 2 }
+            });
+          }
+        });
+        return nextEdges;
+      });
+    }
+  }, [updateNodeData, workflowId]);
+
+  const onReplaceWorkflow = useCallback((newNodes: any[], newEdges: any[]) => {
+    const timestamp = Date.now();
+    const restoredNodes = newNodes.map((nn, i) => {
+      const id = nn.id || `node_${timestamp}_${i}`;
+      const label = nn.label || nn.title || nn.data?.label || "New Node";
+      const nodeType = nn.nodeType || nn.type || nn.data?.nodeType || "http";
+      const config = nn.config || nn.data?.config || {};
+
+      return {
+        id,
+        type: "workflowNode",
+        position: nn.position || { x: 250, y: 150 * (i + 1) },
+        data: {
+          label,
+          nodeType,
+          config,
+          onUpdate: updateNodeData,
+          workflowId
+        }
+      };
+    });
+
+    setNodes(restoredNodes);
+
+    const restoredEdges = (newEdges || []).map((ne, i) => {
+      const source = ne.source || ne.source_node_id || ne.from;
+      const target = ne.target || ne.target_node_id || ne.to;
+
+      let sourceHandle = ne.sourceHandle || ne.source_handle;
+      if (sourceHandle === "next") sourceHandle = null;
+
+      let targetHandle = ne.targetHandle || ne.target_handle;
+      if (targetHandle === "next") targetHandle = null;
+
+      return {
+        id: ne.id || `edge_${timestamp}_${i}`,
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+        animated: true,
+        style: { stroke: "#6366f1", strokeWidth: 2 }
+      };
+    }).filter(e => e.source && e.target);
+
+    setEdges(restoredEdges);
+  }, [updateNodeData, workflowId]);
 
   return (
     <div className="h-screen w-full flex bg-[#0B0E14] relative text-white">
@@ -502,58 +697,62 @@ export default function WorkflowEditor({
           onAddNode={() => setIsSidebarOpen(true)}
           onNameChange={setWorkflowName}
           onRun={runWorkflow}
+          onStop={stopWorkflow}
+          isRunning={isRunning}
           onExport={handleExport}
           onImport={handleImport}
           onToggleAssistant={() => setIsAssistantOpen(!isAssistantOpen)}
           isAssistantOpen={isAssistantOpen}
+          onToggleWalkthrough={() => setIsWalkthroughOpen(true)}
+          onToggleHistory={() => {
+            if (showReportPanel) setShowReportPanel(false);
+            setShowHistory(!showHistory);
+          }}
+          isHistoryOpen={showHistory}
+          onToggleReport={async () => {
+            if (showHistory) setShowHistory(false);
+            const isOpening = !showReportPanel;
+            setShowReportPanel(isOpening);
+            if (isOpening) {
+              try {
+                setReportData({ loading: true, error: null, report: null });
+                const res = await fetch(`/api/ai/reports/${workflowId}`);
+                const data = await res.json();
+                if (data.ok) {
+                  setReportData({ loading: false, error: null, report: data.report });
+                } else {
+                  setReportData({ loading: false, error: data.error || "Failed to load report", report: null });
+                }
+              } catch (e: any) {
+                setReportData({ loading: false, error: e.message, report: null });
+              }
+            }
+          }}
+          isReportOpen={showReportPanel}
+        />
+
+        <Walkthrough
+          isOpen={isWalkthroughOpen}
+          onClose={() => setIsWalkthroughOpen(false)}
+          steps={walkthroughSteps}
         />
 
         <WorkflowAssistant
           isOpen={isAssistantOpen}
           onClose={() => setIsAssistantOpen(false)}
           onAddTemplate={addTemplate}
+          onModifyWorkflow={onModifyWorkflow}
+          onReplaceWorkflow={onReplaceWorkflow}
+          onRunWorkflow={runWorkflow}
           connectors={connectors}
+          templates={WORKFLOW_TEMPLATES}
+          nodes={nodes}
+          edges={edges}
+          logs={runLogs}
+          isRunning={isRunning}
         />
 
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
-          {/* Safety Report Toggle Button */}
-          <button
-            onClick={async () => {
-              if (showHistory) setShowHistory(false);
-              const isOpening = !showReportPanel;
-              setShowReportPanel(isOpening);
-              if (isOpening) {
-                try {
-                  setReportData({ loading: true, error: null, report: null });
-                  const res = await fetch(`/api/ai/reports/${workflowId}`);
-                  const data = await res.json();
-                  if (data.ok) {
-                    setReportData({ loading: false, error: null, report: data.report });
-                  } else {
-                    setReportData({ loading: false, error: data.error || "Failed to load report", report: null });
-                  }
-                } catch (e: any) {
-                  setReportData({ loading: false, error: e.message, report: null });
-                }
-              }
-            }}
-            className={`p-2 rounded bg-[#151C2F] border border-gray-700 hover:text-white transition-colors flex items-center gap-2 ${showReportPanel ? "text-green-400 border-green-500" : "text-gray-400"}`}
-            title="Safety Report"
-          >
-            <Shield className="w-5 h-5" />
-          </button>
 
-          <button
-            onClick={() => {
-              if (showReportPanel) setShowReportPanel(false);
-              setShowHistory(!showHistory)
-            }}
-            className={`p-2 rounded bg-[#151C2F] border border-gray-700 hover:text-white transition-colors ${showHistory ? "text-blue-400 border-blue-500" : "text-gray-400"}`}
-            title="Execution History"
-          >
-            <Clock className="w-5 h-5" />
-          </button>
-        </div>
 
         <ReactFlow
           nodes={nodes}
@@ -656,9 +855,11 @@ export default function WorkflowEditor({
                 </div>
 
                 <div className="bg-[#0B0E14] p-4 rounded-lg border border-gray-800 mb-4 flex flex-col items-center">
-                  <span className="text-4xl font-bold text-blue-400 mb-2">{(reportData.report.avgScore * 100).toFixed(0)}%</span>
+                  <span className="text-4xl font-bold text-blue-400 mb-2">
+                    {reportData.report.totalRuns === 0 ? "N/A" : `${(reportData.report.avgScore * 100).toFixed(0)}%`}
+                  </span>
                   <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-2">
-                    <div className="h-full bg-blue-500" style={{ width: `${reportData.report.avgScore * 100}%` }}></div>
+                    <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: reportData.report.totalRuns === 0 ? '0%' : `${reportData.report.avgScore * 100}%` }}></div>
                   </div>
                   <span className="text-xs text-gray-400 uppercase tracking-wider">Average Safety Score</span>
                 </div>

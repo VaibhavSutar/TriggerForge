@@ -91,6 +91,10 @@ export async function workflowRoutes(app: FastifyInstance) {
           where: { id },
           data: { name, json: { nodes, edges } },
         });
+
+        // Sync Trigger Service
+        syncTrigger(workflow.id, workflow.json);
+
         return reply.send({ ok: true, mode: "updateById", workflow });
       }
 
@@ -216,6 +220,17 @@ export async function workflowRoutes(app: FastifyInstance) {
           json: true,
           createdAt: true,
           updatedAt: true,
+          _count: {
+            select: { executions: true }
+          },
+          executions: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              status: true,
+              createdAt: true
+            }
+          }
         },
       });
       return reply.send({ ok: true, items });
