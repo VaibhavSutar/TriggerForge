@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: triggerforge-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && cd apps/server && pnpm run generate && cd ../.. && npx turbo run build --filter=@triggerforge/server
+    startCommand: cd apps/server && pnpm run start
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+      - key: GOOGLE_REDIRECT_URI
+      - key: GEMINI_API_KEY
+      - key: OPENAI_API_KEY

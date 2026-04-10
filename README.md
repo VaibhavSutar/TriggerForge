@@ -4,6 +4,16 @@ This document provides a simple, clear overview of the TriggerForge architecture
 
 ---
 
+## 🚀 One-Click Deployment
+
+### Frontend (Vercel)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FVaibhavSutar%2FTriggerForge&root-directory=apps/web&env=NEXT_PUBLIC_API_URL,NEXT_PUBLIC_API_BASE)
+
+### Backend (Render)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FVaibhavSutar%2FTriggerForge)
+
+---
+
 ## 1. System Blocks Explained
 
 TriggerForge is built using several main blocks. Here is an explanation of what each block does and its inputs/outputs.

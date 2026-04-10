@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd ../../ && npx turbo run build --filter=@triggerforge/web",
+  "installCommand": "curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=9.15.5 sh - && /vercel/.local/share/pnpm/pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
+}
