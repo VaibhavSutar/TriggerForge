@@ -16,15 +16,15 @@ jobs:
     
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         with:
           version: 8.9.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'pnpm'
@@ -57,7 +57,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: TriggerForge-Desktop-${{ matrix.os }}
           path: |
