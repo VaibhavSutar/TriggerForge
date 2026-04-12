@@ -33,7 +33,7 @@ jobs:
         run: pnpm install
 
       - name: Generate Prisma Client
-        run: cd database && npx prisma generate
+        run: pnpm run generate --filter @triggerforge/server
 
       - name: Build Backend (Fastify)
         run: pnpm run build --filter @triggerforge/server

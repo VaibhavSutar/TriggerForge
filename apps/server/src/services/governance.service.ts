@@ -20,7 +20,7 @@ export class GovernanceService {
             // Analyze them in parallel to ensure the report is up to date
             if (unanalyzedLogs.length > 0) {
                 console.log(`[GovernanceService] Analyzing ${unanalyzedLogs.length} unscored logs...`);
-                await Promise.all(unanalyzedLogs.map(log =>
+                await Promise.all(unanalyzedLogs.map((log: any) =>
                     this.analyzeLog(log.id, `${log.inputPrompt} ${log.outputResponse}`)
                 ));
             }
@@ -30,10 +30,10 @@ export class GovernanceService {
             });
 
             const totalRuns = logs.length;
-            const flaggedRuns = logs.filter(l => l.flagged).length;
+            const flaggedRuns = logs.filter((l: any) => l.flagged).length;
 
             // Calculate average safety score if available, default to 1.0
-            const totalScore = logs.reduce((sum, log) => sum + (log.safetyScore ?? 1.0), 0);
+            const totalScore = logs.reduce((sum: number, log: any) => sum + (log.safetyScore ?? 1.0), 0);
             const avgScore = totalRuns > 0 ? totalScore / totalRuns : 0.0;
 
             const report = await prisma.safetyReport.create({
