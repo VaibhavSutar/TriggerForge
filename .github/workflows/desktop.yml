@@ -51,6 +51,9 @@ jobs:
           cp -r apps/web/public apps/web/.next/standalone/apps/web/public || echo "No public dir"
         shell: bash
 
+      - name: Build Desktop Main Process
+        run: pnpm --filter @triggerforge/desktop run build
+
       - name: Package Desktop App
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
