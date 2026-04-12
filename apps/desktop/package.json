@@ -14,7 +14,7 @@
     "package:win": "electron-builder --win"
   },
   "dependencies": {
-    "electron-store": "^8.2.0",
+    "electron-store": "^6.0.1",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
@@ -25,6 +25,12 @@
   "build": {
     "appId": "com.triggerforge.app",
     "productName": "TriggerForge",
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
     "mac": {
       "category": "public.app-category.productivity"
     },
