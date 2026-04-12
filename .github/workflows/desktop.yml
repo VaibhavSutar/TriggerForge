@@ -52,7 +52,13 @@ jobs:
         shell: bash
 
       - name: Package Desktop App
-        run: pnpm --filter @triggerforge/desktop run package
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            pnpm --filter @triggerforge/desktop run package:mac
+          else
+            pnpm --filter @triggerforge/desktop run package:win
+          fi
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           

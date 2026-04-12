@@ -1,12 +1,17 @@
 {
   "name": "@triggerforge/desktop",
   "version": "1.0.0",
+  "description": "TriggerForge Desktop App - Automate your workflows natively.",
+  "author": "Vaibhav Sutar",
+  "repository": "https://github.com/VaibhavSutar/TriggerForge",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
     "dev": "tsc && electron .",
     "build": "tsc",
-    "package": "electron-builder --mac --win"
+    "package": "electron-builder",
+    "package:mac": "electron-builder --mac",
+    "package:win": "electron-builder --win"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
