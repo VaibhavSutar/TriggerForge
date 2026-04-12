@@ -33,14 +33,14 @@ jobs:
         run: pnpm install
 
       - name: Generate Prisma Client
-        run: pnpm run generate --filter @triggerforge/server
+        run: pnpm --filter @triggerforge/server run generate
 
       - name: Build Backend (Fastify)
-        run: pnpm run build --filter @triggerforge/server
+        run: pnpm --filter @triggerforge/server run build
 
       - name: Build Frontend (Next.js Standalone)
         run: |
-          pnpm run build --filter @triggerforge/web
+          pnpm --filter @triggerforge/web run build
           # Next.js standalone requires copying static and public assets
           # This syntax uses bash, so on Windows we need to use bash coreutils
         shell: bash
@@ -52,7 +52,7 @@ jobs:
         shell: bash
 
       - name: Package Desktop App
-        run: pnpm run package --filter @triggerforge/desktop
+        run: pnpm --filter @triggerforge/desktop run package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
