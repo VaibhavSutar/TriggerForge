@@ -12,9 +12,6 @@ turbo/
 .next/
 
 # lockfiles
-pnpm-lock.yaml
-yarn.lock
-package-lock.json
 
 # local env files
 .env
