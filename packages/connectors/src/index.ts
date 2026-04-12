@@ -76,7 +76,7 @@ const ALL_CONNECTORS: Connector[] = [
   discordWebhookConnector,
   // slackConnector,
   // twitterConnector,
-  // telegramConnector,
+  telegramConnector,
   // teamsConnector,
   emailConnector,
   huggingFaceConnector,

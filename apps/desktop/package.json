@@ -1,9 +1,47 @@
 {
   "name": "@triggerforge/desktop",
+  "version": "1.0.0",
   "private": true,
+  "main": "dist/main.js",
   "scripts": {
-    "dev": "echo \"Run Tauri dev (configure tauri)\"",
-    "build": "echo \"Build Tauri (configure tauri)\""
+    "dev": "tsc && electron .",
+    "build": "tsc",
+    "package": "electron-builder --mac --win"
   },
-  "dependencies": {}
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "electron": "^29.1.5",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.4.5"
+  },
+  "build": {
+    "appId": "com.triggerforge.app",
+    "productName": "TriggerForge",
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "extraResources": [
+      {
+        "from": "../web/.next/standalone",
+        "to": "next-app"
+      },
+      {
+        "from": "../server/dist",
+        "to": "server-app"
+      },
+      {
+        "from": "../../database/prisma",
+        "to": "prisma-schema"
+      }
+    ]
+  }
 }

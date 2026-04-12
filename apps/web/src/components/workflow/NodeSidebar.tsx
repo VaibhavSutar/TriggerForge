@@ -68,18 +68,19 @@ export function NodeSidebar({
       { id: "loop", title: "Loop (Array Iteration)", kind: "action", defaultConfig: { array: "[]" } },
       { id: "http", title: "HTTP Request", kind: "action", defaultConfig: { url: "https://api.example.com", method: "GET" } },
       { id: "ai", title: "AI Text Gen", kind: "action", defaultConfig: { prompt: "Explain quantum physics", model: "gemini-1.5-flash", apiKey: "" } },
-      { id: "mcp_tool", title: "MCP Tool Call", kind: "action", defaultConfig: { serverName: "filesystem", toolName: "list_files", args: {} } },
+      // { id: "mcp_tool", title: "MCP Tool Call", kind: "action", defaultConfig: { serverName: "filesystem", toolName: "list_files", args: {} } },
       { id: "google_gmail", title: "Gmail: Send", kind: "action", defaultConfig: { to: "user@example.com", subject: "Hello", body: "Message" } },
+      // { id: "telegram", title: "Telegram Config", kind: "action", defaultConfig: { botToken: "", chatId: "", message: "Hello from TriggerForge!" } },
 
       // RAG & Agent Nodes
       { id: "google_drive_trigger", title: "Google Drive Trigger", kind: "trigger", defaultConfig: { folderId: "" } },
       { id: "google_drive", title: "Google Drive", kind: "action", defaultConfig: { operation: "download", fileId: "" } },
-      { id: "text_splitter", title: "Text Splitter", kind: "action", defaultConfig: { chunkSize: 1000, chunkOverlap: 200 } },
+      // { id: "text_splitter", title: "Text Splitter", kind: "action", defaultConfig: { chunkSize: 1000, chunkOverlap: 200 } },
       { id: "gemini", title: "Google Gemini", kind: "action", defaultConfig: { operation: "chat", model: "gemini-pro", input: "" } },
-      { id: "pinecone", title: "Pinecone", kind: "action", defaultConfig: { operation: "upsert", indexName: "my-index", vectors: [] } },
-      { id: "vector_store_tool", title: "Vector Store Tool", kind: "action", defaultConfig: { name: "search_docs", description: "Search docs" } },
-      { id: "memory_window", title: "Chat Memory", kind: "action", defaultConfig: { operation: "add", windowSize: 5 } },
-      { id: "agent", title: "AI Agent", kind: "action", defaultConfig: { goal: "Answer user question", tools: [] } },
+      // { id: "pinecone", title: "Pinecone", kind: "action", defaultConfig: { operation: "upsert", indexName: "my-index", vectors: [] } },
+      // { id: "vector_store_tool", title: "Vector Store Tool", kind: "action", defaultConfig: { name: "search_docs", description: "Search docs" } },
+      // { id: "memory_window", title: "Chat Memory", kind: "action", defaultConfig: { operation: "add", windowSize: 5 } },
+      // { id: "agent", title: "AI Agent", kind: "action", defaultConfig: { goal: "Answer user question", tools: [] } },
     ],
     []
   );
