@@ -28,8 +28,11 @@
     "files": [
       "dist/**/*",
       "public/**/*",
-      "package.json",
-      "node_modules/**/*"
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/electron-store/**/*",
+      "**/node_modules/conf/**/*"
     ],
     "mac": {
       "category": "public.app-category.productivity"
