@@ -15,14 +15,16 @@
   },
   "dependencies": {
     "electron-store": "^6.0.1",
+    "conf": "^10.0.0",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "electron": "^29.1.5",
+    "electron": "29.1.5",
     "electron-builder": "^24.13.3",
     "typescript": "^5.4.5"
   },
   "build": {
+    "electronVersion": "29.1.5",
     "appId": "com.triggerforge.app",
     "productName": "TriggerForge",
     "files": [
