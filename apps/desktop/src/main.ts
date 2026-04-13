@@ -138,3 +138,7 @@ ipcMain.on('save-env', (event, newEnv) => {
   startBackendProcesses();
   createMainWindow();
 });
+
+ipcMain.handle('get-env', () => {
+  return store.get('env') || {};
+});
