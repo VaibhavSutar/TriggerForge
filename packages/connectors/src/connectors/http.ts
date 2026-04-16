@@ -12,8 +12,19 @@ export const httpConnector: Connector = {
     if (!url) throw new Error("Missing URL in HTTP connector config");
 
     const templateCtx = { state: ctx.state, ...ctx.state };
-    const renderedUrl = Mustache.render(String(url), templateCtx);
-    const renderedBody = body ? Mustache.render(String(body), templateCtx) : undefined;
+    
+    // Resolve URL
+    const renderedUrl = (typeof url === "string" && url.includes("{{")) 
+        ? Mustache.render(url, templateCtx) 
+        : url;
+
+    // Resolve and Stringify Body
+    let finalBody = body;
+    if (typeof body === "string" && body.includes("{{")) {
+        finalBody = Mustache.render(body, templateCtx);
+    } else if (typeof body === "object" && body !== null) {
+        finalBody = JSON.stringify(body);
+    }
 
     ctx.logs.push(`[http] ${method.toUpperCase()} ${renderedUrl}`);
 
@@ -22,7 +33,7 @@ export const httpConnector: Connector = {
         url: renderedUrl,
         method,
         headers,
-        data: renderedBody,
+        data: finalBody,
         timeout: timeout_ms,
         validateStatus: () => true
       });

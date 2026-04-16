@@ -126,5 +126,100 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
             { source: "6", target: "7" },
             { source: "7", target: "8" }
         ]
+    },
+    {
+        id: "seo_sanity_content_engine",
+        name: "Enterprise SEO & Sanity Content Engine",
+        description: "Generate high-authority tech articles matching your Sanity 'blogs' schema, including SEO metadata, and push directly to your CMS.",
+        nodes: [
+            { id: "1", connectorId: "start", label: "Start Discovery", position: { x: 100, y: 100 }, config: { event: "manual" } },
+            { id: "2", connectorId: "ai", label: "Market Research (JSON)", position: { x: 100, y: 250 }, config: { model: "gemini-2.0-flash", prompt: "As an SEO expert for a Software/Tech services company specializing in {{NIChE_KEYWORDS}}, identify 3 high-intent educational topics for CTOs and Engineers. Return ONLY a JSON array with 'topic', 'targetKeyword', and 'audiencePainPoint'.", system: "You are a senior SEO strategist. Respond ONLY with valid JSON." } },
+            { id: "3", connectorId: "loop", label: "Process Topics", position: { x: 100, y: 400 }, config: { array: "{{ $node.2.output.text }}" } },
+            {
+                id: "4",
+                connectorId: "ai",
+                label: "Generate Prime Content",
+                position: { x: -100, y: 550 },
+                config: {
+                    model: "gemini-2.0-flash",
+                    prompt: `As a Senior Technical Content Strategist, write a comprehensive, high-authority article for CTOs on: {{item.topic}}
+Focusing on: {{item.audiencePainPoint}}
+Keyword: {{item.targetKeyword}}
+
+Return a JSON object containing:
+1. "title": A compelling, SEO-friendly title.
+2. "subtitle": An engaging sub-headline.
+3. "slug": A URL-friendly string.
+4. "excerpt": A 2-sentence meta description.
+5. "category": Assume a relevant category (e.g., "Technology & Digital Transformation").
+6. "categoryColor": Valid hex code or string representing the color (e.g., "00000").
+7. "date": Use EXACTLY "2026-04-16T12:00:00.000Z".
+8. "readTime": Estimated read time as a string number (e.g., "6").
+9. "content": The article content strictly as a JSON ARRAY of Sanity Portable Text blocks. Do NOT use markdown strings. 
+CRITICAL: Every block AND every span MUST have a uniquely generated 6-character string "_key".
+Example structure for content:
+[
+  { "_key": "a1b2c3", "_type": "block", "style": "normal", "children": [ { "_key": "x9y8z7", "_type": "span", "marks": [], "text": "Regular paragraph text here." } ] },
+  { "_key": "d4e5f6", "_type": "block", "style": "h2", "children": [ { "_key": "u1v2w3", "_type": "span", "marks": ["strong"], "text": "Heading text here" } ] }
+]
+
+DO NOT include any extra fields. Return ONLY the JSON object.`,
+
+                }
+            },
+            {
+                id: "5",
+                connectorId: "ai",
+                label: "Social Reach Hooks",
+                position: { x: 300, y: 550 },
+                config: {
+                    model: "gemini-2.0-flash",
+                    prompt: `Generate 3 high-impact social media posts for the following article:
+Title: {{$node.4.title}}
+Subtitle: {{$node.4.subtitle}}
+
+Return a JSON object with keys "linkedin", "x", and "instagram", each containing the post "content".`,
+                }
+            },
+            {
+                id: "6",
+                connectorId: "http",
+                label: "Push to Sanity (blogs)",
+                position: { x: 100, y: 750 },
+                config: {
+                    method: "POST",
+                    url: "https://{{YOUR_SANITY_PROJECT_ID}}.api.sanity.io/v2021-06-07/data/mutate/{{YOUR_SANITY_DATASET}}",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer {{YOUR_SANITY_API_TOKEN}}"
+                    },
+                    body: {
+                        mutations: [
+                            {
+                                create: {
+                                    _type: "blogs",
+                                    title: "{{$node.4.title}}",
+                                    subtitle: "{{$node.4.subtitle}}",
+                                    slug: { _type: "slug", current: "{{$node.4.slug}}" },
+                                    excerpt: "{{$node.4.excerpt}}",
+                                    category: "{{$node.4.category}}",
+                                    categoryColor: "{{$node.4.categoryColor}}",
+                                    date: "{{$node.4.date}}",
+                                    readTime: "{{$node.4.readTime}}",
+                                    content: "{{$node.4.content}}"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        ],
+        edges: [
+            { source: "1", target: "2" },
+            { source: "2", target: "3" },
+            { source: "3", target: "4" },
+            { source: "4", target: "5" },
+            { source: "5", target: "6" }
+        ]
     }
 ];

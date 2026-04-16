@@ -1,31 +1,70 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>TriggerForge Setup</title>
   <style>
-    body { font-family: -apple-system, sans-serif; padding: 20px; background: #0f172a; color: white; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; margin-bottom: 5px;}
-    button { padding: 10px 20px; background: #3b82f6; border: none; color: white; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #2563eb; }
-    .muted { color: #94a3b8; font-size: 0.85em; }
+    body {
+      font-family: -apple-system, sans-serif;
+      padding: 20px;
+      background: #0f172a;
+      color: white;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: white;
+      margin-bottom: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #3b82f6;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    .muted {
+      color: #94a3b8;
+      font-size: 0.85em;
+    }
   </style>
 </head>
+
 <body>
   <h2>Local TriggerForge Server Configuration</h2>
   <p class="muted">You must provide the following variables to run TriggerForge locally.</p>
-  
+
   <div class="form-group">
     <label>Database URL (Postgres)</label>
     <input type="text" id="DATABASE_URL" placeholder="postgresql://user:pass@localhost:5432/db" />
   </div>
-  
+
   <div class="form-group">
     <label>JWT Secret</label>
     <input type="text" id="JWT_SECRET" placeholder="Super secure random string" />
   </div>
-  
+
   <div class="form-group">
     <label>Backend PORT</label>
     <input type="text" id="PORT" value="4000" />
@@ -40,7 +79,7 @@
     <label>Google Client Secret</label>
     <input type="text" id="GOOGLE_CLIENT_SECRET" placeholder="Your Google OAuth Secret" />
   </div>
-  
+
   <div class="form-group">
     <label>OpenAI API Key (Optional)</label>
     <input type="text" id="OPENAI_API_KEY" placeholder="sk-..." />
@@ -50,13 +89,13 @@
     <label>Gemini API Key (Optional)</label>
     <input type="text" id="GEMINI_API_KEY" placeholder="AIza..." />
   </div>
-  
+
   <button onclick="saveEnv()">Save & Start Local Server</button>
 
   <script>
     const { ipcRenderer } = require('electron');
     const inputIds = ['DATABASE_URL', 'JWT_SECRET', 'PORT', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'OPENAI_API_KEY', 'GEMINI_API_KEY'];
-    
+
     // Load current values safely
     async function loadConfig() {
       try {
@@ -68,7 +107,7 @@
         console.error("Failed to load config via IPC:", err);
       }
     }
-    
+
     loadConfig();
 
     function saveEnv() {
@@ -76,14 +115,15 @@
       inputIds.forEach(id => {
         newEnv[id] = document.getElementById(id).value;
       });
-      
+
       // Redirect UI logic internally (Auth Callback uses backend port)
       newEnv['GOOGLE_REDIRECT_URI'] = `http://localhost:${newEnv['PORT']}/auth/google/callback`;
       // We also need NEXT_PUBLIC_API_URL so frontend can hit backend!
       newEnv['NEXT_PUBLIC_API_URL'] = `http://localhost:${newEnv['PORT']}`;
-      
+
       ipcRenderer.send('save-env', newEnv);
     }
   </script>
 </body>
+
 </html>

@@ -132,6 +132,12 @@ async function executeNode(
       data: err.message,
       timestamp: Date.now(),
     });
+
+    // Notify external listeners immediately
+    if (context.callbacks?.onNodeError) {
+      context.callbacks.onNodeError(id, err.message);
+    }
+
     return { success: false, error: err.message };
   }
 }
@@ -202,6 +208,7 @@ export async function executeWorkflowFromJson(
     services,
     state: { ...initialState, workflowId: workflowJson.id }, // Inject workflow ID
     nodeLabels: {},
+    callbacks,
   };
 
   // 1. Build Lookup Maps
@@ -265,7 +272,7 @@ export async function executeWorkflowFromJson(
   let isCancelled = false;
   while (execQueue.length > 0) {
     const { nodeId, input: currentInput, item, iterationResults } = execQueue.shift()!;
-    
+
     // Check if we should stop
     if (callbacks?.onCheckStatus) {
       const ok = await callbacks.onCheckStatus();

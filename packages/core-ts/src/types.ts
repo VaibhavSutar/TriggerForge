@@ -19,6 +19,12 @@ export interface WorkflowContext {
   services?: Record<string, any>; // [NEW] Dependency injection
   nodeLabels?: Record<string, string>; // [NEW] Map ID -> Label
   item?: any; // [NEW] Current processing item (for loops)
+  callbacks?: {
+    onNodeStart?: (nodeId: string, input: any) => Promise<void>;
+    onNodeFinish?: (nodeId: string, output: any) => Promise<void>;
+    onNodeError?: (nodeId: string, error: any) => Promise<void>;
+    onCheckStatus?: () => Promise<boolean>;
+  };
 }
 
 /* ----------------------------------

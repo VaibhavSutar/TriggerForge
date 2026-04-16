@@ -611,7 +611,19 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
   };
 
   const handleConfigUpdate = (key: string, value: any) => {
-    const newConfig = { ...tempConfig, [key]: value };
+    let finalValue = value;
+    
+    // Auto-parse JSON strings for object-based fields
+    if (typeof value === "string" && (value.trim().startsWith("{") || value.trim().startsWith("["))) {
+      try {
+        finalValue = JSON.parse(value);
+      } catch (e) {
+        // Keep as string if it's currently invalid JSON (e.g. while typing)
+        finalValue = value;
+      }
+    }
+
+    const newConfig = { ...tempConfig, [key]: finalValue };
     setTempConfig(newConfig);
     if (data.onUpdate) data.onUpdate(id, { config: newConfig });
   };
@@ -934,8 +946,26 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
     }
 
 
-    // Textarea for message or body
-    if (key.toLowerCase() === "message" || key.toLowerCase() === "body") {
+    // Object/JSON Editor
+    if (typeof value === "object" && value !== null) {
+      return (
+        <div key={key} className="mb-2">
+          <label className="block text-xs font-medium text-gray-300 mb-1">
+            {key} (JSON)
+          </label>
+          <textarea
+            value={JSON.stringify(value, null, 2)}
+            onChange={(e) => handleConfigUpdate(key, e.target.value)}
+            className="w-full px-2 py-1 text-xs bg-[#0B0E14] text-white border border-gray-700 rounded font-mono focus:ring-1 focus:ring-blue-500 nodrag"
+            rows={8}
+            placeholder={`Enter ${key} JSON`}
+          />
+        </div>
+      );
+    }
+
+    // Textarea for message or body strings
+    if (key.toLowerCase() === "message" || key.toLowerCase() === "body" || key.toLowerCase() === "headers") {
       return (
         <div key={key} className="mb-2">
           <label className="block text-xs font-medium text-gray-300 mb-1">
@@ -1416,10 +1446,11 @@ export const WorkflowNode = memo(({ id, data, selected }: NodeProps<NodeData>) =
                     )}
                   </div>
 
-                  {Object.entries(defaultConfigs[data.nodeType] ?? tempConfig).map(
+                  {Object.entries(tempConfig).map(
                     ([key, value]) => {
-                      if (data.nodeType === "webhook" && ["active", "payload"].includes(key)) return null;
-                      return renderConfigInput(key, tempConfig[key] ?? value);
+                      if (["active", "payload"].includes(key)) return null;
+                      if (data.nodeType === "webhook" && key === "active") return null;
+                      return renderConfigInput(key, value);
                     }
                   )}
 

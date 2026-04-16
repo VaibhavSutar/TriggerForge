@@ -16,15 +16,15 @@ export const conditionConnector: Connector = {
     try {
       const passed = !!eval(rendered);
       ctx.logs.push(`[condition] ${condition} => ${passed}`);
-      
+
       // Cleanest approach: Return a structured result that the engine 
       // can recognize to maintain data flow.
-      return { 
-        success: true, 
-        output: { 
-          passed, 
-          data: ctx.input 
-        } 
+      return {
+        success: true,
+        output: {
+          passed,
+          data: ctx.input
+        }
       };
     } catch (err: any) {
       throw new Error(`Failed to evaluate condition "${rendered}": ${err.message}.`);
