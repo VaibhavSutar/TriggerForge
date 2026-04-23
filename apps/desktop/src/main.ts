@@ -105,7 +105,7 @@ async function createMainWindow() {
 
   // Wait for the Next.js server to come up
   const nextPort = Number((store.get('env') as any)?.FRONTEND_PORT) || 3000;
-  
+
   // We ping the next server until it's ready, then load
   const pingNext = () => {
     fetch(`http://localhost:${nextPort}`)
@@ -131,7 +131,7 @@ async function createMainWindow() {
 function startBackendProcesses() {
   const envConfig = store.get('env') as Record<string, string>;
   const mergedEnv = { ...process.env, ...envConfig };
-  
+
   if (fastifyProcess) {
     fastifyProcess.kill();
     fastifyProcess = null;
@@ -140,30 +140,30 @@ function startBackendProcesses() {
     nextProcess.kill();
     nextProcess = null;
   }
-  
+
   if (!app.isPackaged) {
     // In Dev Mode: Use npm run dev inside their respective folders
     const serverDir = path.resolve(__dirname, '../../server');
     const webDir = path.resolve(__dirname, '../../web');
-    
+
     // 1. Fastify Backend
     console.log('Starting Fastify Dev Server at:', serverDir);
     fastifyProcess = child_process.spawn('npm', ['run', 'dev'], { env: mergedEnv, cwd: serverDir, shell: true });
     fastifyProcess.on('error', (err) => console.error('Fastify Dev Error:', err));
-    
+
     // 2. NextJS Frontend
     const nextPort = Number(envConfig.FRONTEND_PORT) || 3000;
     const nextEnv = { ...mergedEnv, PORT: nextPort.toString() };
     console.log('Starting Next.js Dev Server at:', webDir);
     nextProcess = child_process.spawn('npm', ['run', 'dev'], { env: nextEnv, cwd: webDir, shell: true });
     nextProcess.on('error', (err) => console.error('Next.js Dev Error:', err));
-    
+
   } else {
     // In Packaged Prod Mode
     // 1. Fastify Backend
     const serverPath = path.join(process.resourcesPath, 'server-app/apps/server/src/index.js');
     const fastifyCwd = path.join(process.resourcesPath, 'server-app/apps/server');
-    
+
     console.log('Starting Fastify Server at:', serverPath, 'in', fastifyCwd);
     fastifyProcess = child_process.fork(serverPath, [], { env: mergedEnv, cwd: fastifyCwd });
     fastifyProcess.on('error', (err) => console.error('Fastify Process Error:', err));
